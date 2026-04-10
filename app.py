@@ -28,9 +28,14 @@ def auth_system():
                     df_users = conn.read(worksheet="usuarios", ttl=0)
                     email_alvo = email_login.strip().lower()
                     
+                   # COMPARAÇÃO BLINDADA (Limpa espaços e ignora maiúsculas)
+                    email_digitado = email_login.strip().lower()
+                    senha_digitada = str(senha_login).strip()
+
+                    # Compara garantindo que tudo na planilha também seja limpo
                     user_match = df_users[
-                        (df_users['email'].str.strip().str.lower() == email_alvo) & 
-                        (df_users['senha'].astype(str).str.strip() == senha_login.strip())
+                        (df_users['email'].astype(str).str.strip().str.lower() == email_digitado) & 
+                        (df_users['senha'].astype(str).str.strip() == senha_digitada)
                     ]
                     
                     if not user_match.empty:
