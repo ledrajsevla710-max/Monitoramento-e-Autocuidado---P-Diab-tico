@@ -79,4 +79,9 @@ if auth_system():
             with col2:
                 sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"])
             
-            col_cid, col_uf = st.columns
+            col_cid, col_uf = st.columns([3, 1]) # O ERRO ESTAVA AQUI (Faltavam os parênteses e a proporção)
+            with col_cid:
+                cidade = st.text_input("Cidade", value="") 
+            with col_uf:
+                lista_uf = ["", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"]
+                uf = st.selectbox("UF", options=lista_uf)
