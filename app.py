@@ -20,7 +20,7 @@ def check_password():
             usuario = st.selectbox("Selecione o Avaliador:", [
                 "Avaliador 01", 
                 "Avaliador 02", 
-                "Coordenador",
+                "Coordenador do Projeto",
                 "Outro"
             ])
             
@@ -38,7 +38,7 @@ def check_password():
     return True
 
 if check_password():
-    # Estilo Visual
+    # Estilo Visual Passo Seguro
     st.markdown("""
         <style>
         .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; height: 3em; }
@@ -53,14 +53,14 @@ if check_password():
     if 'dados' not in st.session_state:
         st.session_state.dados = {}
 
-    # --- TELA 1: PERFIL DO PACIENTE ---
+    # --- TELA 1: IDENTIFICAÇÃO DO PACIENTE ---
     if st.session_state.etapa == 1:
-        st.markdown(f"<p style='text-align: right; color: gray;'>👤 Usuário: {st.session_state.avaliador}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: right; color: gray;'>👤 Avaliador: {st.session_state.avaliador}</p>", unsafe_allow_html=True)
         st.markdown("<h1 style='text-align: center; color: #007bff;'>👣 Passo Seguro</h1>", unsafe_allow_html=True)
         
         with st.container():
-            st.markdown('<div class="card"><h3>👤 Identificação</h3>', unsafe_allow_html=True)
-            nome = st.text_input("Nome Completo")
+            st.markdown('<div class="card"><h3>👤 Dados de Identificação</h3>', unsafe_allow_html=True)
+            nome = st.text_input("Nome Completo do Paciente")
             
             col_nasc, col_sexo = st.columns(2)
             with col_nasc:
@@ -68,16 +68,16 @@ if check_password():
             with col_sexo:
                 sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"])
             
-            col_cid, col_est = st.columns([3, 1]) # Cidade maior que o Estado
+            col_cid, col_est = st.columns([3, 1])
             with col_cid:
                 cidade = st.text_input("Cidade")
             with col_est:
-                # Lista de estados adjacentes focada no Piauí
-                estado = st.selectbox("UF", ["PI", "MA", "CE", "PE", "BA", "TO", "Outro"], index=0)
+                # Foco no Piauí e estados adjacentes
+                estado = st.selectbox("UF", ["PI", "MA", "CE", "PE", "BA", "TO", "Outros"], index=0)
             
             st.markdown('</div>', unsafe_allow_html=True)
         
-        if st.button("PRÓXIMO ➡"):
+        if st.button("AVANÇAR PARA AVALIAÇÃO ➡"):
             if nome and cidade:
                 st.session_state.dados.update({
                     "Avaliador": st.session_state.avaliador,
@@ -86,26 +86,26 @@ if check_password():
                     "Idade": datetime.now().year - nasc.year, 
                     "Sexo": sexo, 
                     "Cidade": cidade,
-                    "Estado": estado # NOVO CAMPO
+                    "Estado": estado
                 })
                 st.session_state.etapa = 2
                 st.rerun()
             else:
-                st.warning("Preencha os campos obrigatórios (Nome e Cidade).")
+                st.warning("Os campos Nome e Cidade são obrigatórios.")
 
-    # --- TELA 2: DADOS CLÍNICOS ---
+    # --- TELA 2: AVALIAÇÃO CLÍNICA DOS PÉS ---
     elif st.session_state.etapa == 2:
-        st.markdown("<h2>🩺 Avaliação Clínica</h2>", unsafe_allow_html=True)
+        st.markdown("<h2>🩺 Avaliação Clínica e Risco</h2>", unsafe_allow_html=True)
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            tempo = st.text_input("Tempo de Diagnóstico (anos)")
-            calo = st.radio("Presença de calosidade?", ["Não", "Sim"])
-            ulcera = st.radio("Ferida/Úlcera ativa?", ["Não", "Sim"])
-            amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
-            local = st.text_area("Observações/Localização")
+            tempo = st.text_input("Tempo de Diabetes (anos)")
+            calo = st.radio("Presença de calosidade nos pés?", ["Não", "Sim"])
+            ulcera = st.radio("Possui úlcera (ferida) ativa?", ["Não", "Sim"])
+            amp = st.radio("Já sofreu alguma amputação?", ["Não", "Sim"])
+            local = st.text_area("Descreva a localização das lesões ou amputações")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if st.button("FINALIZAR E SALVAR ✔"):
+        if st.button("FINALIZAR REGISTRO ✔"):
             st.session_state.dados.update({
                 "Tempo Diabetes": tempo, 
                 "Calosidade": calo, 
@@ -115,6 +115,7 @@ if check_password():
             })
             
             try:
+                # Garante que os dados sejam acrescentados sem apagar os anteriores
                 df_existente = conn.read()
                 novo_registro = pd.DataFrame([st.session_state.dados])
                 df_final = pd.concat([df_existente, novo_registro], ignore_index=True)
@@ -124,15 +125,23 @@ if check_password():
                 st.session_state.etapa = 3
                 st.rerun()
             except Exception as e:
-                st.error(f"Erro ao salvar: {e}")
+                st.error(f"Erro ao salvar na planilha: {e}")
 
     # --- TELA 3: CONCLUSÃO ---
     elif st.session_state.etapa == 3:
-        st.success("✅ Os dados foram registrados com sucesso!")
-        if st.button("NOVO REGISTRO 🔄"):
+        st.success("✅ Atendimento registrado com sucesso no banco de dados!")
+        
+        st.markdown("""
+        ### Recomendações de Segurança:
+        * Verifique se os calçados do paciente são adequados.
+        * Reforce a necessidade de hidratação e inspeção diária.
+        """)
+        
+        if st.button("NOVO PACIENTE 🔄"):
             st.session_state.etapa = 1
             st.session_state.dados = {}
             st.rerun()
-        if st.button("SAIR DO SISTEMA"):
+            
+        if st.button("ENCERRAR SESSÃO"):
             st.session_state.authenticated = False
             st.rerun()
