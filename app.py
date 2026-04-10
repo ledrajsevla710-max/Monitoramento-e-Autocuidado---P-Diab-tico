@@ -22,23 +22,30 @@ def auth_system():
         with tab_login:
             email_login = st.text_input("E-mail:", key="l_email")
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
+            
             if st.button("ACESSAR SISTEMA"):
                 try:
+                    # ttl=0 força a leitura do dado que você acabou de cadastrar
                     df_users = conn.read(worksheet="usuarios", ttl=0)
                     
-                    if 'email' not in df_users.columns:
-                        st.error("Base de dados vazia. Por favor, realize o primeiro cadastro.")
+                    # Padroniza o e-mail digitado (tira espaços e põe em minúsculo)
+                    email_alvo = email_login.strip().lower()
+                    
+                    # Padroniza a planilha e procura o usuário
+                    # Usamos .astype(str) na senha para evitar erro se for só número
+                    user_match = df_users[
+                        (df_users['email'].str.strip().str.lower() == email_alvo) & 
+                        (df_users['senha'].astype(str) == senha_login.strip())
+                    ]
+                    
+                    if not user_match.empty:
+                        st.session_state.authenticated = True
+                        st.session_state.usuario_nome = user_match.iloc[0]['nome']
+                        st.rerun()
                     else:
-                        # Filtra usuário e senha
-                        user_match = df_users[(df_users['email'] == email_login) & (df_users['senha'] == senha_login)]
-                        if not user_match.empty:
-                            st.session_state.authenticated = True
-                            st.session_state.usuario_nome = user_match.iloc[0]['nome']
-                            st.rerun()
-                        else:
-                            st.error("E-mail ou senha incorretos.")
-                except Exception:
-                    st.error("Erro: A aba 'usuarios' não existe ou está inacessível.")
+                        st.error("E-mail ou senha não encontrados. Verifique se digitou corretamente.")
+                except Exception as e:
+                    st.error(f"Erro ao ler usuários: {e}. Verifique se a aba 'usuarios' tem as colunas: nome, email, senha")
 
         with tab_cadastro:
             st.subheader("Crie sua conta")
@@ -50,19 +57,19 @@ def auth_system():
                 if n_nome and n_email and n_senha:
                     try:
                         try:
-                            df_users = conn.read(worksheet="usuarios")
+                            df_users = conn.read(worksheet="usuarios", ttl=0)
                         except:
                             df_users = pd.DataFrame(columns=["nome", "email", "senha"])
 
-                        if 'email' in df_users.columns and n_email in df_users['email'].values:
+                        if not df_users.empty and n_email.strip().lower() in df_users['email'].str.strip().str.lower().values:
                             st.error("Este e-mail já está cadastrado.")
                         else:
-                            novo_u = pd.DataFrame([{"nome": n_nome, "email": n_email, "senha": n_senha}])
+                            novo_u = pd.DataFrame([{"nome": n_nome.strip(), "email": n_email.strip().lower(), "senha": n_senha.strip()}])
                             df_atualizado = pd.concat([df_users, novo_u], ignore_index=True)
                             conn.update(worksheet="usuarios", data=df_atualizado)
-                            st.success("Cadastro realizado! Agora faça o login na aba ao lado.")
+                            st.success("Cadastro realizado com sucesso! Vá para a aba 'Entrar'.")
                     except Exception as e:
-                        st.error(f"Erro técnico ao salvar: {e}")
+                        st.error(f"Erro ao salvar cadastro: {e}")
                 else:
                     st.warning("Preencha todos os campos.")
         return False
