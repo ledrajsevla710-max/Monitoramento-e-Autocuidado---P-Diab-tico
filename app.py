@@ -126,6 +126,12 @@ if auth_system():
                 "Amputação": amp, "Observações": obs,
                 "Avaliador": st.session_state.usuario_nome
             }
-            try:
+               try:
+                # O segredo está em fechar corretamente os parênteses e colchetes
                 df_atual = conn.read()
-                df_novo = pd.concat([df_atual
+                df_novo = pd.concat([df_atual, pd.DataFrame([registro_final])], ignore_index=True)
+                conn.update(data=df_novo)
+                st.session_state.etapa = 3
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao salvar: {e}")
