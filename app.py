@@ -41,14 +41,12 @@ def auth_system():
                         col_nome = [c for c in df_users.columns if 'nome' in c][0]
                         st.session_state.usuario_nome = user_match.iloc[0][col_nome]
                         
-                        # Carrega dados básicos do usuário para evitar redigitar
                         st.session_state.dados_paciente = {
                             "Nome": user_match.iloc[0][col_nome],
                             "Cidade": user_match.iloc[0].get('cidade', ""),
                             "UF": user_match.iloc[0].get('uf', ""),
                             "Sexo": user_match.iloc[0].get('sexo', "Outro")
                         }
-                        # PULA PARA A ETAPA CLÍNICA (Etapa 2)
                         st.session_state.etapa = 2
                         st.rerun()
                     else:
@@ -64,7 +62,7 @@ if auth_system():
         <style>
         .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; }
         .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
-        .flashcard { padding: 20px; border-radius: 15px; background-color: #e3f2fd; border: 1px solid #90caf9; text-align: center; margin-bottom: 10px; min-height: 150px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0d47a1; }
+        .flashcard { padding: 20px; border-radius: 15px; background-color: #e3f2fd; border: 1px solid #90caf9; text-align: center; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0d47a1; }
         .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-weight: bold; }
         .lembrete-pes { background-color: #ffeb3b; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; color: black; margin-bottom: 20px; border: 2px dashed #f44336; }
         </style>
@@ -72,38 +70,31 @@ if auth_system():
 
     if 'etapa' not in st.session_state: st.session_state.etapa = 2
     
-    # --- BARRA LATERAL ---
+    # --- BARRA LATERAL SEGURA ---
     st.sidebar.markdown(f"### 👤 {st.session_state.usuario_nome}")
     
-    # OPÇÃO DE EDITAR DADOS CADASTRADOS (ENDEREÇO/PERFIL)
-    if st.sidebar.button("✏️ Editar Perfil/Endereço"):
+    if st.sidebar.button("🏠 Início / Nova Avaliação"):
+        st.session_state.etapa = 2
+        st.rerun()
+
+    if st.sidebar.button("✏️ Editar Perfil"):
         st.session_state.etapa = 1
         st.rerun()
 
-    with st.sidebar.expander("📊 Consultar Dados Salvos"):
-        try:
-            df_historico = conn.read(ttl=0)
-            st.dataframe(df_historico, use_container_width=True)
-        except:
-            st.write("Nenhum dado encontrado ainda.")
-
-    if st.sidebar.button("Sair do Sistema"):
+    st.sidebar.divider()
+    if st.sidebar.button("🚪 Sair do Sistema"):
         st.session_state.authenticated = False
         st.rerun()
 
     # --- LEMBRETE FIXO ---
     st.markdown('<div class="lembrete-pes">🔔 LEMBRETE DIÁRIO: Já olhou seus pés hoje? Verifique feridas, bolhas ou manchas!</div>', unsafe_allow_html=True)
 
-    # --- ETAPA 1: EDIÇÃO DE PERFIL (SÓ APARECE SE CLICAR EM EDITAR) ---
+    # --- ETAPA 1: EDITAR PERFIL ---
     if st.session_state.etapa == 1:
-        st.markdown("<h2 style='text-align: center;'>📝 Editar Dados Cadastrais</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>📝 Editar Perfil</h2>", unsafe_allow_html=True)
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
             nome_p = st.text_input("Nome Completo", value=st.session_state.dados_paciente.get("Nome", ""))
-            col1, col2 = st.columns(2)
-            with col1:
-                sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"], index=0)
-            
             col_cid, col_uf = st.columns([3, 1])
             with col_cid:
                 cidade = st.text_input("Cidade", value=st.session_state.dados_paciente.get("Cidade", "")) 
@@ -112,45 +103,52 @@ if auth_system():
                 uf = st.selectbox("UF", options=lista_uf)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if st.button("SALVAR ALTERAÇÕES ✔"):
-            st.session_state.dados_paciente.update({"Nome": nome_p, "Cidade": cidade, "UF": uf, "Sexo": sexo})
-            st.session_state.etapa = 2
-            st.rerun()
+        col_voltar, col_salvar = st.columns(2)
+        with col_voltar:
+            if st.button("⬅ CANCELAR"):
+                st.session_state.etapa = 2
+                st.rerun()
+        with col_salvar:
+            if st.button("SALVAR ALTERAÇÕES ✔"):
+                st.session_state.dados_paciente.update({"Nome": nome_p, "Cidade": cidade, "UF": uf})
+                st.success("Perfil atualizado!")
+                st.session_state.etapa = 2
+                st.rerun()
 
-    # --- ETAPA 2: AVALIAÇÃO CLÍNICA (DIRETO PARA QUEM JÁ LOGOU) ---
+    # --- ETAPA 2: AVALIAÇÃO CLÍNICA ---
     elif st.session_state.etapa == 2:
         p = st.session_state.dados_paciente
-        st.markdown(f"### 🩺 Nova Avaliação Clínica")
-        st.write(f"Paciente: **{p['Nome']}** | Local: **{p['Cidade']}-{p['UF']}**")
+        st.markdown(f"### 🩺 Avaliação de Autocuidado")
+        st.write(f"Paciente: **{p['Nome']}** | Cidade: **{p['Cidade']}-{p['UF']}**")
         
         col_form, col_flash = st.columns([2, 1])
 
         with col_form:
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            tempo = st.text_input("Possui diabetes há quanto tempo? (anos)")
-            calo = st.radio("Já teve ou possui calosidade?", ["Não", "Sim"])
-            ulcera = st.radio("Tem ou já teve úlcera nos pés?", ["Não", "Sim"])
-            amp = st.radio("Já passou por amputação?", ["Não", "Sim"])
-            local = st.text_area("Se sim, qual o local da ferida ou amputação?")
+            tempo = st.text_input("Tempo de Diabetes (anos)")
+            calo = st.radio("Notou alguma calosidade nova?", ["Não", "Sim"])
+            ulcera = st.radio("Notou alguma ferida nova?", ["Não", "Sim"])
+            amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
+            local = st.text_area("Local da alteração / Observações")
             st.markdown('</div>', unsafe_allow_html=True)
 
-            bloqueio_critico = False
+            trava = False
             if ulcera == "Sim" or calo == "Sim":
-                st.markdown('<div class="alerta-card">⚠️ NOTIFICAÇÃO: Nova alteração detectada! Procure um enfermeiro ou médico para avaliação do pé diabético.</div>', unsafe_allow_html=True)
-                confirmou = st.checkbox("Confirmo que recebi orientação sobre a alteração.")
-                if not confirmou: bloqueio_critico = True
+                st.markdown('<div class="alerta-card">⚠️ ATENÇÃO: Foi detectada uma nova alteração. Procure sua Unidade de Saúde para avaliação profissional.</div>', unsafe_allow_html=True)
+                confirmou = st.checkbox("Estou ciente da necessidade de procurar atendimento profissional.")
+                if not confirmou: trava = True
 
         with col_flash:
             st.markdown("### 💡 Orientações")
-            st.markdown('<div class="flashcard">👀 Olhe seus pés todos os dias em busca de cortes ou vermelhidão.</div>', unsafe_allow_html=True)
-            st.markdown('<div class="flashcard">🧴 Use hidratante diariamente, mas NUNCA passe entre os dedos.</div>', unsafe_allow_html=True)
-            st.markdown('<div class="flashcard">👟 Use sempre calçados adequados e fechados. Nunca ande descalço.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="flashcard">👀 Observe seus pés diariamente.</div>', unsafe_allow_html=True)
+            st.markdown('<div class="flashcard">🧴 Hidrate os pés (evite entre os dedos).</div>', unsafe_allow_html=True)
+            st.markdown('<div class="flashcard">👟 Use calçados confortáveis e fechados.</div>', unsafe_allow_html=True)
 
-        if st.button("SALVAR REGISTRO ✔"):
-            if bloqueio_critico:
-                st.error("Por favor, confirme que recebeu a orientação antes de salvar.")
+        if st.button("SALVAR E FINALIZAR ✔"):
+            if trava:
+                st.error("Por favor, confirme a ciência do encaminhamento.")
             else:
-                registro_final = {
+                registro = {
                     "Data/Hora": datetime.now().strftime('%d/%m/%Y %H:%M'),
                     **st.session_state.dados_paciente,
                     "Tempo Diabetes": tempo, "Calo": calo, "Ulcera": ulcera, 
@@ -159,7 +157,7 @@ if auth_system():
                 }
                 try:
                     df_atual = conn.read()
-                    df_novo = pd.concat([df_atual, pd.DataFrame([registro_final])], ignore_index=True)
+                    df_novo = pd.concat([df_atual, pd.DataFrame([registro])], ignore_index=True)
                     conn.update(data=df_novo)
                     st.session_state.etapa = 3
                     st.rerun()
@@ -169,7 +167,7 @@ if auth_system():
     # --- ETAPA 3: SUCESSO ---
     elif st.session_state.etapa == 3:
         st.balloons()
-        st.success("✅ Registro clínico armazenado com sucesso!")
-        if st.button("Fazer Nova Avaliação Clínica"):
-            st.session_state.etapa = 2 # Volta direto para as perguntas clínicas
+        st.success("✅ Registro realizado com sucesso!")
+        if st.button("Fazer Nova Avaliação"):
+            st.session_state.etapa = 2
             st.rerun()
