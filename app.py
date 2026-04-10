@@ -142,3 +142,12 @@ if auth_system():
             })
             
             try:
+                # Tudo o que acontece depois do try PRECISA estar recuado (4 espaços)
+                df_existente = conn.read()
+                novo_reg = pd.DataFrame([st.session_state.dados])
+                df_final = pd.concat([df_existente, novo_reg], ignore_index=True)
+                conn.update(data=df_final)
+                st.session_state.etapa = 3
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao salvar: {e}")
