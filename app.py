@@ -94,4 +94,7 @@ if auth_system():
         .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; }
         .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
         .flashcard { padding: 20px; border-radius: 15px; background-color: #e3f2fd; border: 1px solid #90caf9; text-align: center; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0d47a1; }
-        .alerta-card { padding:
+        .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-weight: bold; }
+        .lembrete-pes { background-color: #ffeb3b; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; color: black; margin-bottom: 20px; border: 2px dashed #f44336; }
+        </style>
+        """, unsafe_allow_html=True) 
