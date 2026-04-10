@@ -26,10 +26,10 @@ def auth_system():
                 try:
                     df_users = conn.read(worksheet="usuarios")
                     
-                    # CORREÇÃO: Garante que a coluna email existe antes de filtrar
                     if 'email' not in df_users.columns:
                         st.error("Base de dados vazia. Por favor, realize o primeiro cadastro.")
                     else:
+                        # Filtra usuário e senha
                         user_match = df_users[(df_users['email'] == email_login) & (df_users['senha'] == senha_login)]
                         if not user_match.empty:
                             st.session_state.authenticated = True
@@ -37,61 +37,9 @@ def auth_system():
                             st.rerun()
                         else:
                             st.error("E-mail ou senha incorretos.")
-                except:
-                    st.error("Erro: A aba 'usuarios' não existe na planilha. Crie-a com as colunas: nome, email, senha")
+                except Exception:
+                    st.error("Erro: A aba 'usuarios' não existe ou está inacessível.")
 
-        with tab_cadastro:
-            st.subheader("Crie sua conta")
-            n_nome = st.text_input("Nome Completo:", key="c_nome")
-            n_email = st.text_input("E-mail:", key="c_email")
-            n_senha = st.text_input("Senha:", type="password", key="c_senha")
-            
-            if st.button("FINALIZAR CADASTRO"):
-                if n_nome and n_email and n_senha:
-                    try:
-                        try:
-                            df_users = conn.read(worksheet="usuarios")
-                        except:
-                            # Se a aba estiver sumida, cria a estrutura do zero
-                            df_users = pd.DataFrame(columns=["nome", "email", "senha"])
-
-                        # CORREÇÃO: Força a criação da coluna 'email' se a planilha vier limpa
-                        if 'email' not in df_users.columns:
-                             df_users = pd.DataFrame(columns=["nome", "email", "senha"])
-
-                        if n_email in df_users['email'].values:
-                            st.error("Este e-mail já está cadastrado.")
-                        else:
-                            novo_u = pd.DataFrame([{"nome": n_nome, "email": n_email, "senha": n_senha}])
-                            df_atualizado = pd.concat([df_users, novo_u], ignore_index=True)
-                            conn.update(worksheet="usuarios", data=df_atualizado)
-                            st.success("Cadastro realizado! Vá para a aba 'Entrar'.")
-                    except Exception as e:
-                        st.error(f"Erro técnico ao salvar: {e}")
-                else:
-                    st.warning("Preencha todos os campos.")
-        return False
-    return True
-        # --- ABA DE LOGIN ---
-        with tab_login:
-            email_login = st.text_input("E-mail:", key="l_email")
-            senha_login = st.text_input("Senha:", type="password", key="l_senha")
-            if st.button("ACESSAR SISTEMA"):
-                try:
-                    df_users = conn.read(worksheet="usuarios")
-                    # Verifica credenciais
-                    user_match = df_users[(df_users['email'] == email_login) & (df_users['senha'] == senha_login)]
-                    
-                    if not user_match.empty:
-                        st.session_state.authenticated = True
-                        st.session_state.usuario_nome = user_match.iloc[0]['nome']
-                        st.rerun()
-                    else:
-                        st.error("E-mail ou senha incorretos.")
-                except:
-                    st.error("Erro: A aba 'usuarios' não foi encontrada ou está vazia.")
-
-        # --- ABA DE CADASTRO ---
         with tab_cadastro:
             st.subheader("Crie sua conta")
             n_nome = st.text_input("Nome Completo:", key="c_nome")
@@ -106,7 +54,7 @@ def auth_system():
                         except:
                             df_users = pd.DataFrame(columns=["nome", "email", "senha"])
 
-                        if n_email in df_users['email'].values:
+                        if 'email' in df_users.columns and n_email in df_users['email'].values:
                             st.error("Este e-mail já está cadastrado.")
                         else:
                             novo_u = pd.DataFrame([{"nome": n_nome, "email": n_email, "senha": n_senha}])
@@ -114,7 +62,7 @@ def auth_system():
                             conn.update(worksheet="usuarios", data=df_atualizado)
                             st.success("Cadastro realizado! Agora faça o login na aba ao lado.")
                     except Exception as e:
-                        st.error(f"Erro ao cadastrar: {e}")
+                        st.error(f"Erro técnico ao salvar: {e}")
                 else:
                     st.warning("Preencha todos os campos.")
         return False
@@ -123,7 +71,6 @@ def auth_system():
 # --- INÍCIO DO FORMULÁRIO (APÓS LOGIN) ---
 if auth_system():
     # Estilo CSS
-    # --- ESTILO CSS (CORRIGIDO) ---
     st.markdown("""
         <style>
         .stButton>button { 
@@ -144,4 +91,85 @@ if auth_system():
             color: black; 
         }
         </style>
-        """, unsafe_allow_html=True) # <-- O fechamento deve ser exatamente assim
+        """, unsafe_allow_html=True)
+
+    # Inicialização de variáveis de sessão para as etapas
+    if 'etapa' not in st.session_state:
+        st.session_state.etapa = 1
+    if 'dados' not in st.session_state:
+        st.session_state.dados = {}
+
+    st.sidebar.write(f"👤 Logado como: **{st.session_state.usuario_nome}**")
+    if st.sidebar.button("Sair"):
+        st.session_state.authenticated = False
+        st.rerun()
+
+    # --- ETAPA 1: DADOS DO PACIENTE ---
+    if st.session_state.etapa == 1:
+        st.markdown("<h2 style='text-align: center;'>👤 Identificação do Paciente</h2>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            nome_p = st.text_input("Nome do Paciente")
+            col1, col2 = st.columns(2)
+            with col1:
+                nasc = st.date_input("Data de Nascimento", min_value=datetime(1920, 1, 1), format="DD/MM/YYYY")
+            with col2:
+                sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"])
+            cidade = st.text_input("Cidade", value="José de Freitas")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.button("PRÓXIMO ➡"):
+            if nome_p:
+                st.session_state.dados.update({
+                    "Data/Hora": datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                    "Nome": nome_p,
+                    "Data Nasc.": nasc.strftime('%d/%m/%Y'),
+                    "Idade": datetime.now().year - nasc.year,
+                    "Sexo": sexo,
+                    "Cidade": cidade
+                })
+                st.session_state.etapa = 2
+                st.rerun()
+            else:
+                st.warning("Preencha o nome do paciente.")
+
+    # --- ETAPA 2: AVALIAÇÃO CLÍNICA ---
+    elif st.session_state.etapa == 2:
+        st.markdown("<h2 style='text-align: center;'>🩺 Avaliação Clínica</h2>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            tempo = st.text_input("Tempo de Diabetes (anos)")
+            calo = st.radio("Possui calosidade?", ["Não", "Sim"])
+            ulcera = st.radio("Possui úlcera ativa?", ["Não", "Sim"])
+            amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
+            local = st.text_area("Observações")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.button("FINALIZAR E SALVAR ✔"):
+            st.session_state.dados.update({
+                "Tempo Diabetes": tempo,
+                "Calosidade": calo,
+                "Úlcera": ulcera,
+                "Amputação": amp,
+                "Localização": local,
+                "Avaliador": st.session_state.usuario_nome
+            })
+            
+            try:
+                df_existente = conn.read()
+                novo_reg = pd.DataFrame([st.session_state.dados])
+                df_final = pd.concat([df_existente, novo_reg], ignore_index=True)
+                conn.update(data=df_final)
+                st.session_state.etapa = 3
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao salvar: {e}")
+
+    # --- ETAPA 3: SUCESSO ---
+    elif st.session_state.etapa == 3:
+        st.balloons()
+        st.success("✅ Dados registrados com sucesso!")
+        if st.button("Novo Registro"):
+            st.session_state.etapa = 1
+            st.session_state.dados = {}
+            st.rerun()
