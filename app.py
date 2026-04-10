@@ -23,29 +23,37 @@ def auth_system():
             email_login = st.text_input("E-mail:", key="l_email")
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
             
-            if st.button("ACESSAR SISTEMA"): # CORRIGIDO: era 'iif'
+            if st.button("ACESSAR SISTEMA"):
                 try:
+                    # Lê a aba de usuários forçando a atualização (ttl=0)
                     df_users = conn.read(worksheet="usuarios", ttl=0)
-                    email_alvo = email_login.strip().lower()
                     
-                   # COMPARAÇÃO BLINDADA (Limpa espaços e ignora maiúsculas)
+                    # --- PADRONIZAÇÃO TOTAL (O PULO DO GATO) ---
+                    # 1. Tira espaços e coloca todos os nomes de colunas em minúsculo
+                    df_users.columns = [str(c).strip().lower() for c in df_users.columns]
+                    
+                    # 2. Limpa os dados da planilha (remove espaços em branco invisíveis)
+                    df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
+                    df_users['senha'] = df_users['senha'].astype(str).str.strip()
+                    
+                    # 3. Limpa o que o usuário digitou agora
                     email_digitado = email_login.strip().lower()
                     senha_digitada = str(senha_login).strip()
-
-                    # Compara garantindo que tudo na planilha também seja limpo
-                    user_match = df_users[
-                        (df_users['email'].astype(str).str.strip().str.lower() == email_digitado) & 
-                        (df_users['senha'].astype(str).str.strip() == senha_digitada)
-                    ]
+                    
+                    # Faz a busca
+                    user_match = df_users[(df_users['email'] == email_digitado) & (df_users['senha'] == senha_digitada)]
                     
                     if not user_match.empty:
                         st.session_state.authenticated = True
-                        st.session_state.usuario_nome = user_match.iloc[0]['nome']
+                        # Pega o nome do usuário (independente se a coluna chama 'nome', 'Nome' ou 'NOME')
+                        coluna_nome = [c for c in df_users.columns if 'nome' in c][0]
+                        st.session_state.usuario_nome = user_match.iloc[0][coluna_nome]
                         st.rerun()
                     else:
                         st.error("E-mail ou senha não encontrados.")
+                        
                 except Exception as e:
-                    st.error(f"Erro ao acessar base: {e}")
+                    st.error(f"Erro técnico: {e}")
 
         with tab_cadastro: # CORRIGIDO: O cadastro agora está na aba correta
             st.subheader("Crie sua conta")
