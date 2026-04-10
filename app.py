@@ -119,17 +119,11 @@ if auth_system():
                 st.markdown('<div class="orientacao-card">💡 ORIENTAÇÃO: Calosidades indicam pontos de pressão. Recomendar calçados adequados e hidratação diária da pele.</div>', unsafe_allow_html=True)
 
         if st.button("SALVAR REGISTRO ✔"):
-            registro_final = {
-                "Data/Hora": datetime.now().strftime('%d/%m/%Y %H:%M'),
-                **st.session_state.dados_paciente,
-                "Tempo Diabetes": tempo, "Calo": calo, "Ulcera": ulcera, 
-                "Amputação": amp, "Observações": obs,
-                "Avaliador": st.session_state.usuario_nome
-            }
-               try:
-                # O segredo está em fechar corretamente os parênteses e colchetes
+            try:
+                # Todas as linhas abaixo do try precisam de 4 espaços extras
                 df_atual = conn.read()
-                df_novo = pd.concat([df_atual, pd.DataFrame([registro_final])], ignore_index=True)
+                registro_final_df = pd.DataFrame([registro_final])
+                df_novo = pd.concat([df_atual, registro_final_df], ignore_index=True)
                 conn.update(data=df_novo)
                 st.session_state.etapa = 3
                 st.rerun()
