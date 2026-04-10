@@ -23,15 +23,11 @@ def auth_system():
             email_login = st.text_input("E-mail:", key="l_email")
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
             
-            iif st.button("ACESSAR SISTEMA"):
+            if st.button("ACESSAR SISTEMA"): # CORRIGIDO: era 'iif'
                 try:
-                    # ttl=0 obriga a ler o cadastro novo na hora!
                     df_users = conn.read(worksheet="usuarios", ttl=0)
-                    
-                    # Limpa o email digitado (tira espaços e põe minúsculo)
                     email_alvo = email_login.strip().lower()
                     
-                    # COMPARAÇÃO BLINDADA: limpa a planilha e o que foi digitado
                     user_match = df_users[
                         (df_users['email'].str.strip().str.lower() == email_alvo) & 
                         (df_users['senha'].astype(str).str.strip() == senha_login.strip())
@@ -45,6 +41,13 @@ def auth_system():
                         st.error("E-mail ou senha não encontrados.")
                 except Exception as e:
                     st.error(f"Erro ao acessar base: {e}")
+
+        with tab_cadastro: # CORRIGIDO: O cadastro agora está na aba correta
+            st.subheader("Crie sua conta")
+            n_nome = st.text_input("Nome Completo:", key="c_nome")
+            n_email = st.text_input("E-mail:", key="c_email")
+            n_senha = st.text_input("Senha:", type="password", key="c_senha")
+            
             if st.button("FINALIZAR CADASTRO"):
                 if n_nome and n_email and n_senha:
                     try:
@@ -53,6 +56,7 @@ def auth_system():
                         except:
                             df_users = pd.DataFrame(columns=["nome", "email", "senha"])
 
+                        # Verifica se e-mail já existe
                         if not df_users.empty and n_email.strip().lower() in df_users['email'].str.strip().str.lower().values:
                             st.error("Este e-mail já está cadastrado.")
                         else:
@@ -69,30 +73,13 @@ def auth_system():
 
 # --- INÍCIO DO FORMULÁRIO (APÓS LOGIN) ---
 if auth_system():
-    # Estilo CSS
     st.markdown("""
         <style>
-        .stButton>button { 
-            width: 100%; 
-            border-radius: 10px; 
-            background-color: #007bff; 
-            color: white; 
-            font-weight: bold; 
-            height: 3em; 
-        }
-        .card { 
-            padding: 20px; 
-            border-radius: 15px; 
-            background-color: #ffffff; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            margin-bottom: 20px; 
-            border-left: 5px solid #007bff; 
-            color: black; 
-        }
+        .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; height: 3em; }
+        .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
         </style>
         """, unsafe_allow_html=True)
 
-    # Inicialização de variáveis de sessão para as etapas
     if 'etapa' not in st.session_state:
         st.session_state.etapa = 1
     if 'dados' not in st.session_state:
@@ -155,20 +142,3 @@ if auth_system():
             })
             
             try:
-                df_existente = conn.read()
-                novo_reg = pd.DataFrame([st.session_state.dados])
-                df_final = pd.concat([df_existente, novo_reg], ignore_index=True)
-                conn.update(data=df_final)
-                st.session_state.etapa = 3
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao salvar: {e}")
-
-    # --- ETAPA 3: SUCESSO ---
-    elif st.session_state.etapa == 3:
-        st.balloons()
-        st.success("✅ Dados registrados com sucesso!")
-        if st.button("Novo Registro"):
-            st.session_state.etapa = 1
-            st.session_state.dados = {}
-            st.rerun()
