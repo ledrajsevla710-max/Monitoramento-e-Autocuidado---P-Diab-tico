@@ -25,37 +25,46 @@ def auth_system():
             
             if st.button("ACESSAR SISTEMA"):
                 try:
-                    # Lê a aba de usuários forçando a atualização (ttl=0)
+                    # Lê os usuários com cache zero
                     df_users = conn.read(worksheet="usuarios", ttl=0)
                     
-                    # --- PADRONIZAÇÃO TOTAL (O PULO DO GATO) ---
-                    # 1. Tira espaços e coloca todos os nomes de colunas em minúsculo
+                    # 1. Padroniza nomes das colunas (remove espaços e põe minúsculo)
                     df_users.columns = [str(c).strip().lower() for c in df_users.columns]
                     
-                    # 2. Limpa os dados da planilha (remove espaços em branco invisíveis)
-                    df_users['email'] = df_users['email'].astype(str).str.strip().str.lower()
-                    df_users['senha'] = df_users['senha'].astype(str).str.strip()
-                    
-                    # 3. Limpa o que o usuário digitou agora
+                    # 2. Prepara os dados digitados
                     email_digitado = email_login.strip().lower()
                     senha_digitada = str(senha_login).strip()
                     
-                    # Faz a busca
-                    user_match = df_users[(df_users['email'] == email_digitado) & (df_users['senha'] == senha_digitada)]
+                    # 3. Função para limpar a senha da planilha (remove o .0 de números do Excel)
+                    def limpar_valor(v):
+                        v = str(v).strip()
+                        if v.endswith('.0'):
+                            return v[:-2]
+                        return v
+
+                    # Aplica a limpeza nos dados da planilha para comparação
+                    df_users['email_comp'] = df_users['email'].astype(str).str.strip().str.lower()
+                    df_users['senha_comp'] = df_users['senha'].apply(limpar_valor)
+                    
+                    # Faz a busca exata
+                    user_match = df_users[
+                        (df_users['email_comp'] == email_digitado) & 
+                        (df_users['senha_comp'] == senha_digitada)
+                    ]
                     
                     if not user_match.empty:
                         st.session_state.authenticated = True
-                        # Pega o nome do usuário (independente se a coluna chama 'nome', 'Nome' ou 'NOME')
-                        coluna_nome = [c for c in df_users.columns if 'nome' in c][0]
-                        st.session_state.usuario_nome = user_match.iloc[0][coluna_nome]
+                        # Tenta pegar a coluna nome independente de maiúsculas
+                        col_nome = [c for c in df_users.columns if 'nome' in c][0]
+                        st.session_state.usuario_nome = user_match.iloc[0][col_nome]
                         st.rerun()
                     else:
-                        st.error("E-mail ou senha não encontrados.")
+                        st.error("E-mail ou senha não encontrados. Verifique se a senha está correta.")
                         
                 except Exception as e:
-                    st.error(f"Erro técnico: {e}")
+                    st.error(f"Erro técnico ao acessar base: {e}")
 
-        with tab_cadastro: # CORRIGIDO: O cadastro agora está na aba correta
+        with tab_cadastro:
             st.subheader("Crie sua conta")
             n_nome = st.text_input("Nome Completo:", key="c_nome")
             n_email = st.text_input("E-mail:", key="c_email")
@@ -69,14 +78,19 @@ def auth_system():
                         except:
                             df_users = pd.DataFrame(columns=["nome", "email", "senha"])
 
-                        # Verifica se e-mail já existe
-                        if not df_users.empty and n_email.strip().lower() in df_users['email'].str.strip().str.lower().values:
+                        # Verifica se e-mail já existe (limpando espaços)
+                        email_novo = n_email.strip().lower()
+                        if not df_users.empty and email_novo in df_users['email'].astype(str).str.strip().str.lower().values:
                             st.error("Este e-mail já está cadastrado.")
                         else:
-                            novo_u = pd.DataFrame([{"nome": n_nome.strip(), "email": n_email.strip().lower(), "senha": n_senha.strip()}])
+                            novo_u = pd.DataFrame([{
+                                "nome": n_nome.strip(), 
+                                "email": email_novo, 
+                                "senha": n_senha.strip()
+                            }])
                             df_atualizado = pd.concat([df_users, novo_u], ignore_index=True)
                             conn.update(worksheet="usuarios", data=df_atualizado)
-                            st.success("Cadastro realizado com sucesso! Vá para a aba 'Entrar'.")
+                            st.success("Cadastro realizado! Agora vá na aba 'Entrar'.")
                     except Exception as e:
                         st.error(f"Erro ao salvar cadastro: {e}")
                 else:
@@ -155,7 +169,6 @@ if auth_system():
             })
             
             try:
-                # Tudo o que acontece depois do try PRECISA estar recuado (4 espaços)
                 df_existente = conn.read()
                 novo_reg = pd.DataFrame([st.session_state.dados])
                 df_final = pd.concat([df_existente, novo_reg], ignore_index=True)
@@ -164,3 +177,12 @@ if auth_system():
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro ao salvar: {e}")
+
+    # --- ETAPA 3: SUCESSO ---
+    elif st.session_state.etapa == 3:
+        st.balloons()
+        st.success("✅ Dados registrados com sucesso!")
+        if st.button("Novo Registro"):
+            st.session_state.etapa = 1
+            st.session_state.dados = {}
+            st.rerun()
