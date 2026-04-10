@@ -70,6 +70,25 @@ def auth_system():
 # --- INÍCIO DO FORMULÁRIO (APÓS LOGIN) ---
 if auth_system():
     # Estilo CSS
+    # --- ESTILO CSS (CORRIGIDO) ---
     st.markdown("""
         <style>
-        .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff
+        .stButton>button { 
+            width: 100%; 
+            border-radius: 10px; 
+            background-color: #007bff; 
+            color: white; 
+            font-weight: bold; 
+            height: 3em; 
+        }
+        .card { 
+            padding: 20px; 
+            border-radius: 15px; 
+            background-color: #ffffff; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            margin-bottom: 20px; 
+            border-left: 5px solid #007bff; 
+            color: black; 
+        }
+        </style>
+        """, unsafe_allow_html=True) # <-- O fechamento deve ser exatamente assim
