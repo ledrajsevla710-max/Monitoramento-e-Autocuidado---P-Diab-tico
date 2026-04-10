@@ -77,4 +77,6 @@ if auth_system():
             with col1:
                 nasc = st.date_input("Nascimento", min_value=datetime(1920,1,1), format="DD/MM/YYYY")
             with col2:
-                sexo = st
+                sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"])
+            
+            col_cid, col_uf = st.columns
