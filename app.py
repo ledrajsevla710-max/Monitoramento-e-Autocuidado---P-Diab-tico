@@ -23,19 +23,18 @@ def auth_system():
             email_login = st.text_input("E-mail:", key="l_email")
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
             
-            if st.button("ACESSAR SISTEMA"):
+            iif st.button("ACESSAR SISTEMA"):
                 try:
-                    # ttl=0 força a leitura do dado que você acabou de cadastrar
+                    # ttl=0 obriga a ler o cadastro novo na hora!
                     df_users = conn.read(worksheet="usuarios", ttl=0)
                     
-                    # Padroniza o e-mail digitado (tira espaços e põe em minúsculo)
+                    # Limpa o email digitado (tira espaços e põe minúsculo)
                     email_alvo = email_login.strip().lower()
                     
-                    # Padroniza a planilha e procura o usuário
-                    # Usamos .astype(str) na senha para evitar erro se for só número
+                    # COMPARAÇÃO BLINDADA: limpa a planilha e o que foi digitado
                     user_match = df_users[
                         (df_users['email'].str.strip().str.lower() == email_alvo) & 
-                        (df_users['senha'].astype(str) == senha_login.strip())
+                        (df_users['senha'].astype(str).str.strip() == senha_login.strip())
                     ]
                     
                     if not user_match.empty:
@@ -43,16 +42,9 @@ def auth_system():
                         st.session_state.usuario_nome = user_match.iloc[0]['nome']
                         st.rerun()
                     else:
-                        st.error("E-mail ou senha não encontrados. Verifique se digitou corretamente.")
+                        st.error("E-mail ou senha não encontrados.")
                 except Exception as e:
-                    st.error(f"Erro ao ler usuários: {e}. Verifique se a aba 'usuarios' tem as colunas: nome, email, senha")
-
-        with tab_cadastro:
-            st.subheader("Crie sua conta")
-            n_nome = st.text_input("Nome Completo:", key="c_nome")
-            n_email = st.text_input("E-mail:", key="c_email")
-            n_senha = st.text_input("Senha:", type="password", key="c_senha")
-            
+                    st.error(f"Erro ao acessar base: {e}")
             if st.button("FINALIZAR CADASTRO"):
                 if n_nome and n_email and n_senha:
                     try:
