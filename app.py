@@ -24,7 +24,7 @@ def auth_system():
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
             if st.button("ACESSAR SISTEMA"):
                 try:
-                    df_users = conn.read(worksheet="usuarios")
+                    df_users = conn.read(worksheet="usuarios", ttl=0)
                     
                     if 'email' not in df_users.columns:
                         st.error("Base de dados vazia. Por favor, realize o primeiro cadastro.")
