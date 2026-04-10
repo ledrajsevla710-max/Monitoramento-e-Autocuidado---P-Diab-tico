@@ -8,7 +8,7 @@ st.set_page_config(page_title="Passo Seguro", page_icon="👣", layout="centered
 
 # --- SISTEMA DE LOGIN COM PERSISTÊNCIA ---
 def check_password():
-    # Verifica se já existe um login salvo nos parâmetros da URL
+    # Verifica se existe um login salvo na URL
     if "auth_key" in st.query_params and st.query_params["auth_key"] == "passo_confirmado":
         st.session_state.authenticated = True
         if "avaliador" not in st.session_state:
@@ -40,7 +40,6 @@ def check_password():
                     st.session_state.avaliador = usuario
                     
                     if manter_conectado:
-                        # Salva o estado na URL para não pedir senha na próxima vez
                         st.query_params["auth_key"] = "passo_confirmado"
                         st.query_params["user"] = usuario
                     st.rerun()
@@ -51,7 +50,7 @@ def check_password():
     return True
 
 if check_password():
-    # Estilo Visual Personalizado
+    # Estilo Visual
     st.markdown("""
         <style>
         .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; height: 3em; }
@@ -59,7 +58,6 @@ if check_password():
         </style>
         """, unsafe_allow_html=True)
 
-    # Conexão com Google Sheets
     conn = st.connection("gsheets", type=GSheetsConnection)
 
     if 'etapa' not in st.session_state:
@@ -86,7 +84,6 @@ if check_password():
             with col_cid:
                 cidade = st.text_input("Cidade")
             with col_uf:
-                # Foco no Piauí e estados adjacentes
                 uf = st.selectbox("UF", ["PI", "MA", "CE", "PE", "BA", "TO", "Outro"], index=0)
             
             st.markdown('</div>', unsafe_allow_html=True)
@@ -105,7 +102,7 @@ if check_password():
                 st.session_state.etapa = 2
                 st.rerun()
             else:
-                st.warning("Preencha os campos obrigatórios (Nome e Cidade).")
+                st.warning("Preencha os campos obrigatórios.")
 
     # --- TELA 2: DADOS CLÍNICOS ---
     elif st.session_state.etapa == 2:
@@ -132,23 +129,12 @@ if check_password():
                 df_existente = conn.read()
                 novo_registro = pd.DataFrame([st.session_state.dados])
                 df_final = pd.concat([df_existente, novo_registro], ignore_index=True)
-                
                 conn.update(data=df_final)
                 st.balloons()
                 st.session_state.etapa = 3
                 st.rerun()
             except Exception as e:
-                st.error(f"Erro ao salvar na planilha: {e}")
+                st.error(f"Erro ao salvar: {e}")
 
     # --- TELA 3: CONCLUSÃO ---
-    elif st.session_state.etapa == 3:
-        st.success("✅ Os dados foram registrados com sucesso!")
-        
-        if st.button("NOVO REGISTRO 🔄"):
-            st.session_state.etapa = 1
-            st.session_state.dados = {}
-            st.rerun()
-            
-        if st.button("SAIR DO SISTEMA (LOGOUT)"):
-            st.session_state.authenticated = False
-            st.query_params.
+    elif st.session
