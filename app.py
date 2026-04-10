@@ -49,12 +49,12 @@ def auth_system():
     return True
 
 if auth_system():
-    # CSS Customizado com Cards de Alerta
+    # CSS Customizado
     st.markdown("""
         <style>
         .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; }
         .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
-        .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-size: 0.9em; }
+        .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-weight: bold; }
         .orientacao-card { padding: 15px; border-radius: 10px; background-color: #d1ecf1; border-left: 5px solid #17a2b8; color: #0c5460; margin-top: 10px; }
         </style>
         """, unsafe_allow_html=True)
@@ -67,9 +67,9 @@ if auth_system():
         st.session_state.authenticated = False
         st.rerun()
 
-    # --- ETAPA 1: IDENTIFICAÇÃO (SÓ APARECE UMA VEZ OU SE RESETADO) ---
+    # --- ETAPA 1: DADOS FIXOS DO PACIENTE ---
     if st.session_state.etapa == 1:
-        st.markdown("<h2 style='text-align: center;'>👤 Paciente</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>👤 Identificação do Paciente</h2>", unsafe_allow_html=True)
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
             nome_p = st.text_input("Nome do Paciente")
@@ -94,11 +94,13 @@ if auth_system():
                 }
                 st.session_state.etapa = 2
                 st.rerun()
+            else:
+                st.warning("Por favor, insira o nome do paciente.")
 
-    # --- ETAPA 2: AVALIAÇÃO CLÍNICA (ESTA PARTE SE REPETE) ---
+    # --- ETAPA 2: AVALIAÇÃO CLÍNICA (REPETITIVA) ---
     elif st.session_state.etapa == 2:
         p = st.session_state.dados_paciente
-        st.markdown(f"### Avaliando: {p['Nome']}")
+        st.markdown(f"### 🩺 Avaliando: {p['Nome']}")
         
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -106,9 +108,24 @@ if auth_system():
             calo = st.radio("Possui calosidade?", ["Não", "Sim"])
             ulcera = st.radio("Possui úlcera ativa?", ["Não", "Sim"])
             amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
-            obs = st.text_area("Localização da Ferida/Observações")
+            obs = st.text_area("Localização da Ferida / Observações Clínicas")
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- CARDS DE ORIENTAÇÃO EM TEMPO REAL ---
+            # CARDS DE ORIENTAÇÃO EM TEMPO REAL
             if ulcera == "Sim":
-                st.markdown('<div class="alerta-card">⚠️ <b>ALERTA:</b> Úlcera ativa detectada. Encaminhar para curativo especializado e avaliar sinais de infecção imediatamente.</div>', unsafe
+                st.markdown('<div class="alerta-card">⚠️ ALERTA: Úlcera ativa detectada. Encaminhar imediatamente para curativo especializado e avaliar sinais de infecção.</div>', unsafe_allow_html=True)
+            
+            if calo == "Sim":
+                st.markdown('<div class="orientacao-card">💡 ORIENTAÇÃO: Calosidades indicam pontos de pressão. Recomendar calçados adequados e hidratação diária da pele.</div>', unsafe_allow_html=True)
+
+        if st.button("SALVAR REGISTRO ✔"):
+            registro_final = {
+                "Data/Hora": datetime.now().strftime('%d/%m/%Y %H:%M'),
+                **st.session_state.dados_paciente,
+                "Tempo Diabetes": tempo, "Calo": calo, "Ulcera": ulcera, 
+                "Amputação": amp, "Observações": obs,
+                "Avaliador": st.session_state.usuario_nome
+            }
+            try:
+                df_atual = conn.read()
+                df_novo = pd.concat([df_atual
