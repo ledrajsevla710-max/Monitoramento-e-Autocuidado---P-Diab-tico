@@ -73,7 +73,7 @@ if check_password():
     # Exibe quem está logado
     st.markdown(f"<div class='user-badge'>👤 Conectado como: <b>{st.session_state.avaliador_nome}</b></div>", unsafe_allow_html=True)
 
-    # --- TELA 1: PERFIL ---
+   # --- TELA 1: PERFIL ---
     if st.session_state.etapa == 1:
         st.markdown("<h1 style='text-align: center;'>👣 Passo Seguro</h1>", unsafe_allow_html=True)
         with st.container():
@@ -90,4 +90,7 @@ if check_password():
             with col_cid:
                 cidade = st.text_input("Cidade", value="José de Freitas")
             with col_uf:
-                uf = st.selectbox("UF", ["PI", "MA", "CE", "PE", "BA",
+                # O ERRO ESTAVA NESTA LINHA ABAIXO
+                uf = st.selectbox("UF", ["PI", "MA", "CE", "PE", "BA", "Outros"], index=0)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
