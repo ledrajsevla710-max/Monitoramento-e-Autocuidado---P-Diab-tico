@@ -64,35 +64,5 @@ def auth_system():
             with col_c:
                 nova_cidade = st.text_input("Cidade:", key="reg_cidade")
             with col_u:
-                uf_reg = st.selectbox("UF:", ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"], index=17, key="reg_uf")
-            
-            if st.button("FINALIZAR CADASTRO"):
-                if novo_nome and novo_email and nova_senha:
-                    try:
-                        df_users_at = conn.read(worksheet="usuarios", ttl=0)
-                        novo_user = pd.DataFrame([{
-                            "nome": novo_nome,
-                            "email": novo_email.strip().lower(),
-                            "senha": nova_senha,
-                            "cidade": nova_cidade,
-                            "uf": uf_reg
-                        }])
-                        df_final_u = pd.concat([df_users_at, novo_user], ignore_index=True)
-                        conn.update(worksheet="usuarios", data=df_final_u)
-                        st.success("Cadastro realizado! Agora faça o login na aba ao lado.")
-                    except Exception as e:
-                        st.error(f"Erro ao cadastrar: {e}")
-                else:
-                    st.warning("Preencha todos os campos.")
-        return False
-    return True
-
-if auth_system():
-    # CSS Customizado
-    st.markdown("""
-        <style>
-        .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; }
-        .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
-        .flashcard { padding: 20px; border-radius: 15px; background-color: #e3f2fd; border: 1px solid #90caf9; text-align: center; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0d47a1; }
-        .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-weight: bold; }
-        .lembrete-pes { background-color: #ffeb3b; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; color: black; margin-bottom: 20px; border: 2px dashed
+                lista_uf_reg = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"]
+                uf_reg = st.selectbox("UF:", lista_uf_reg, index=17, key="reg_uf")
