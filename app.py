@@ -80,4 +80,4 @@ if auth_system():
         st.rerun()
 
     # --- ETAPA 1: IDENTIFICAÇÃO (DADOS FIXOS) ---
-    if
+    if 'etapa' not in st.session_state: st.session_state.etapa = 1
