@@ -9,180 +9,106 @@ st.set_page_config(page_title="Passo Seguro", page_icon="👣", layout="centered
 # --- CONEXÃO COM GOOGLE SHEETS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- SISTEMA DE AUTENTICAÇÃO (LOGIN/CADASTRO) ---
 def auth_system():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
         st.markdown("<h1 style='text-align: center; color: #007bff;'>👣 Passo Seguro</h1>", unsafe_allow_html=True)
-        
         tab_login, tab_cadastro = st.tabs(["🔐 Entrar", "📝 Cadastrar-se"])
 
         with tab_login:
             email_login = st.text_input("E-mail:", key="l_email")
             senha_login = st.text_input("Senha:", type="password", key="l_senha")
-            
             if st.button("ACESSAR SISTEMA"):
                 try:
-                    # Lê os usuários com cache zero
                     df_users = conn.read(worksheet="usuarios", ttl=0)
-                    
-                    # 1. Padroniza nomes das colunas (remove espaços e põe minúsculo)
                     df_users.columns = [str(c).strip().lower() for c in df_users.columns]
-                    
-                    # 2. Prepara os dados digitados
                     email_digitado = email_login.strip().lower()
                     senha_digitada = str(senha_login).strip()
                     
-                    # 3. Função para limpar a senha da planilha (remove o .0 de números do Excel)
-                    def limpar_valor(v):
+                    def limpar_v(v):
                         v = str(v).strip()
-                        if v.endswith('.0'):
-                            return v[:-2]
-                        return v
+                        return v[:-2] if v.endswith('.0') else v
 
-                    # Aplica a limpeza nos dados da planilha para comparação
-                    df_users['email_comp'] = df_users['email'].astype(str).str.strip().str.lower()
-                    df_users['senha_comp'] = df_users['senha'].apply(limpar_valor)
+                    df_users['email_c'] = df_users['email'].astype(str).str.strip().str.lower()
+                    df_users['senha_c'] = df_users['senha'].apply(limpar_v)
                     
-                    # Faz a busca exata
-                    user_match = df_users[
-                        (df_users['email_comp'] == email_digitado) & 
-                        (df_users['senha_comp'] == senha_digitada)
-                    ]
+                    user_match = df_users[(df_users['email_c'] == email_digitado) & (df_users['senha_c'] == senha_digitada)]
                     
                     if not user_match.empty:
                         st.session_state.authenticated = True
-                        # Tenta pegar a coluna nome independente de maiúsculas
                         col_nome = [c for c in df_users.columns if 'nome' in c][0]
                         st.session_state.usuario_nome = user_match.iloc[0][col_nome]
                         st.rerun()
                     else:
-                        st.error("E-mail ou senha não encontrados. Verifique se a senha está correta.")
-                        
+                        st.error("Dados incorretos.")
                 except Exception as e:
-                    st.error(f"Erro técnico ao acessar base: {e}")
-
-        with tab_cadastro:
-            st.subheader("Crie sua conta")
-            n_nome = st.text_input("Nome Completo:", key="c_nome")
-            n_email = st.text_input("E-mail:", key="c_email")
-            n_senha = st.text_input("Senha:", type="password", key="c_senha")
-            
-            if st.button("FINALIZAR CADASTRO"):
-                if n_nome and n_email and n_senha:
-                    try:
-                        try:
-                            df_users = conn.read(worksheet="usuarios", ttl=0)
-                        except:
-                            df_users = pd.DataFrame(columns=["nome", "email", "senha"])
-
-                        # Verifica se e-mail já existe (limpando espaços)
-                        email_novo = n_email.strip().lower()
-                        if not df_users.empty and email_novo in df_users['email'].astype(str).str.strip().str.lower().values:
-                            st.error("Este e-mail já está cadastrado.")
-                        else:
-                            novo_u = pd.DataFrame([{
-                                "nome": n_nome.strip(), 
-                                "email": email_novo, 
-                                "senha": n_senha.strip()
-                            }])
-                            df_atualizado = pd.concat([df_users, novo_u], ignore_index=True)
-                            conn.update(worksheet="usuarios", data=df_atualizado)
-                            st.success("Cadastro realizado! Agora vá na aba 'Entrar'.")
-                    except Exception as e:
-                        st.error(f"Erro ao salvar cadastro: {e}")
-                else:
-                    st.warning("Preencha todos os campos.")
+                    st.error(f"Erro: {e}")
         return False
     return True
 
-# --- INÍCIO DO FORMULÁRIO (APÓS LOGIN) ---
 if auth_system():
+    # CSS Customizado com Cards de Alerta
     st.markdown("""
         <style>
-        .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; height: 3em; }
+        .stButton>button { width: 100%; border-radius: 10px; background-color: #007bff; color: white; font-weight: bold; }
         .card { padding: 20px; border-radius: 15px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #007bff; color: black; }
+        .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-size: 0.9em; }
+        .orientacao-card { padding: 15px; border-radius: 10px; background-color: #d1ecf1; border-left: 5px solid #17a2b8; color: #0c5460; margin-top: 10px; }
         </style>
         """, unsafe_allow_html=True)
 
-    if 'etapa' not in st.session_state:
-        st.session_state.etapa = 1
-    if 'dados' not in st.session_state:
-        st.session_state.dados = {}
+    if 'etapa' not in st.session_state: st.session_state.etapa = 1
+    if 'dados_paciente' not in st.session_state: st.session_state.dados_paciente = {}
 
-    st.sidebar.write(f"👤 Logado como: **{st.session_state.usuario_nome}**")
+    st.sidebar.write(f"👤 {st.session_state.usuario_nome}")
     if st.sidebar.button("Sair"):
         st.session_state.authenticated = False
         st.rerun()
 
-    # --- ETAPA 1: DADOS DO PACIENTE ---
+    # --- ETAPA 1: IDENTIFICAÇÃO (SÓ APARECE UMA VEZ OU SE RESETADO) ---
     if st.session_state.etapa == 1:
-        st.markdown("<h2 style='text-align: center;'>👤 Identificação do Paciente</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>👤 Paciente</h2>", unsafe_allow_html=True)
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
             nome_p = st.text_input("Nome do Paciente")
             col1, col2 = st.columns(2)
             with col1:
-                nasc = st.date_input("Data de Nascimento", min_value=datetime(1920, 1, 1), format="DD/MM/YYYY")
+                nasc = st.date_input("Nascimento", min_value=datetime(1920,1,1), format="DD/MM/YYYY")
             with col2:
                 sexo = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"])
-            cidade = st.text_input("Cidade", value="José de Freitas")
+            
+            col_cid, col_uf = st.columns([3, 1])
+            with col_cid:
+                cidade = st.text_input("Cidade", value="José de Freitas")
+            with col_uf:
+                uf = st.text_input("UF", value="PI", max_chars=2)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if st.button("PRÓXIMO ➡"):
+        if st.button("AVANÇAR PARA AVALIAÇÃO ➡"):
             if nome_p:
-                st.session_state.dados.update({
-                    "Data/Hora": datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                    "Nome": nome_p,
-                    "Data Nasc.": nasc.strftime('%d/%m/%Y'),
-                    "Idade": datetime.now().year - nasc.year,
-                    "Sexo": sexo,
-                    "Cidade": cidade
-                })
+                st.session_state.dados_paciente = {
+                    "Nome": nome_p, "Nasc": nasc.strftime('%d/%m/%Y'),
+                    "Sexo": sexo, "Cidade": cidade, "UF": uf.upper()
+                }
                 st.session_state.etapa = 2
                 st.rerun()
-            else:
-                st.warning("Preencha o nome do paciente.")
 
-    # --- ETAPA 2: AVALIAÇÃO CLÍNICA ---
+    # --- ETAPA 2: AVALIAÇÃO CLÍNICA (ESTA PARTE SE REPETE) ---
     elif st.session_state.etapa == 2:
-        st.markdown("<h2 style='text-align: center;'>🩺 Avaliação Clínica</h2>", unsafe_allow_html=True)
+        p = st.session_state.dados_paciente
+        st.markdown(f"### Avaliando: {p['Nome']}")
+        
         with st.container():
             st.markdown('<div class="card">', unsafe_allow_html=True)
             tempo = st.text_input("Tempo de Diabetes (anos)")
             calo = st.radio("Possui calosidade?", ["Não", "Sim"])
             ulcera = st.radio("Possui úlcera ativa?", ["Não", "Sim"])
             amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
-            local = st.text_area("Observações")
+            obs = st.text_area("Localização da Ferida/Observações")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if st.button("FINALIZAR E SALVAR ✔"):
-            st.session_state.dados.update({
-                "Tempo Diabetes": tempo,
-                "Calosidade": calo,
-                "Úlcera": ulcera,
-                "Amputação": amp,
-                "Localização": local,
-                "Avaliador": st.session_state.usuario_nome
-            })
-            
-            try:
-                df_existente = conn.read()
-                novo_reg = pd.DataFrame([st.session_state.dados])
-                df_final = pd.concat([df_existente, novo_reg], ignore_index=True)
-                conn.update(data=df_final)
-                st.session_state.etapa = 3
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro ao salvar: {e}")
-
-    # --- ETAPA 3: SUCESSO ---
-    elif st.session_state.etapa == 3:
-        st.balloons()
-        st.success("✅ Dados registrados com sucesso!")
-        if st.button("Novo Registro"):
-            st.session_state.etapa = 1
-            st.session_state.dados = {}
-            st.rerun()
+            # --- CARDS DE ORIENTAÇÃO EM TEMPO REAL ---
+            if ulcera == "Sim":
+                st.markdown('<div class="alerta-card">⚠️ <b>ALERTA:</b> Úlcera ativa detectada. Encaminhar para curativo especializado e avaliar sinais de infecção imediatamente.</div>', unsafe
