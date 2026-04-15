@@ -25,7 +25,15 @@ def auth_system():
                 df.columns = [c.lower().strip() for c in df.columns]
 
                 df['email_c'] = df['email'].astype(str).str.lower().str.strip()
-                df['senha_c'] = df['senha'].astype(str).str.strip()
+               def limpar_valor(v):
+    v = str(v).strip()
+    return v[:-2] if v.endswith(".0") else v
+
+df['email_c'] = df['email'].astype(str).str.strip().str.lower()
+df['senha_c'] = df['senha'].apply(limpar_valor)
+
+email_digitado = email_login.strip().lower()
+senha_digitada = limpar_valor(senha_login)
 
                 user = df[(df['email_c'] == email_login.lower().strip()) & (df['senha_c'] == senha_login.strip())]
 
