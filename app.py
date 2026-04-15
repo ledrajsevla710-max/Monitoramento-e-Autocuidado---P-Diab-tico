@@ -16,18 +16,38 @@ def auth_system():
         st.markdown("<h1 style='text-align: center; color: #007bff;'>👣 Passo Seguro</h1>", unsafe_allow_html=True)
         tab_login, tab_cadastro = st.tabs(["🔐 Entrar", "📝 Cadastrar-se"])
 
-        with tab_login:
-            email_login = st.text_input("E-mail:")
-            senha_login = st.text_input("Senha:", type="password")
+       with tab_login:
+    email_login = st.text_input("E-mail:")
+    senha_login = st.text_input("Senha:", type="password")
 
-            if st.button("ACESSAR SISTEMA"):
-                df = conn.read(worksheet="usuarios", ttl=0)
-                df.columns = [c.lower().strip() for c in df.columns]
+    if st.button("ACESSAR SISTEMA"):
+        try:
+            df = conn.read(worksheet="usuarios", ttl=0)
+            df.columns = [str(c).strip().lower() for c in df.columns]
 
-                df['email_c'] = df['email'].astype(str).str.lower().str.strip()
-               def limpar_valor(v):
-    v = str(v).strip()
-    return v[:-2] if v.endswith(".0") else v
+            # 🔥 FUNÇÃO CORRETA (INDENTAÇÃO CERTA)
+            def limpar_valor(v):
+                v = str(v).strip()
+                return v[:-2] if v.endswith(".0") else v
+
+            df['email_c'] = df['email'].astype(str).str.strip().str.lower()
+            df['senha_c'] = df['senha'].apply(limpar_valor)
+
+            email_digitado = email_login.strip().lower()
+            senha_digitada = limpar_valor(senha_login)
+
+            user = df[
+                (df['email_c'] == email_digitado) &
+                (df['senha_c'] == senha_digitada)
+            ]
+
+            if not user.empty:
+                st.success("Login realizado!")
+            else:
+                st.error("Login inválido")
+
+        except Exception as e:
+            st.error(f"Erro: {e}")
 
 df['email_c'] = df['email'].astype(str).str.strip().str.lower()
 df['senha_c'] = df['senha'].apply(limpar_valor)
