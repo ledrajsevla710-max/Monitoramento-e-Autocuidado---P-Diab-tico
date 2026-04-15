@@ -122,4 +122,45 @@ if auth_system():
 
     # --- ETAPA 1: EDITAR PERFIL ---
     if st.session_state.etapa == 1:
-        st.markdown("<h2 style=') 
+        st.markdown("<h2 style='text-align: center;'>📝 Editar Perfil</h2>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            nome_p = st.text_input("Nome Completo", value=st.session_state.dados_paciente.get("Nome", ""))
+            col_cid, col_uf = st.columns([3, 1])
+            with col_cid:
+                cidade = st.text_input("Cidade", value=st.session_state.dados_paciente.get("Cidade", "")) 
+            with col_uf:
+                lista_uf = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"]
+                uf_p = st.selectbox("UF", options=lista_uf, index=17)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        col_voltar, col_salvar = st.columns(2)
+        with col_voltar:
+            if st.button("⬅ CANCELAR"):
+                st.session_state.etapa = 2
+                st.rerun()
+        with col_salvar:
+            if st.button("SALVAR ALTERAÇÕES ✔"):
+                st.session_state.dados_paciente.update({"Nome": nome_p, "Cidade": cidade, "UF": uf_p})
+                st.success("Perfil atualizado!")
+                st.session_state.etapa = 2
+                st.rerun()
+
+    # --- ETAPA 2: AVALIAÇÃO CLÍNICA ---
+    elif st.session_state.etapa == 2:
+        p = st.session_state.dados_paciente
+        st.markdown(f"### 🩺 Avaliação de Autocuidado")
+        st.write(f"Paciente: **{p['Nome']}** | Cidade: **{p['Cidade']}-{p['UF']}**")
+        
+        col_form, col_flash = st.columns([2, 1])
+
+        with col_form:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            tempo = st.text_input("Tempo de Diabetes (anos)")
+            calo = st.radio("Notou alguma calosidade nova?", ["Não", "Sim"])
+            ulcera = st.radio("Notou alguma ferida nova?", ["Não", "Sim"])
+            amp = st.radio("Histórico de amputação?", ["Não", "Sim"])
+            local = st.text_area("Local da alteração / Observações")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            trava
