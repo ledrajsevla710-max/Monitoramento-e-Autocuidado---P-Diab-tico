@@ -3,16 +3,23 @@ import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-# --- CONFIGURAÇÃO ---
+# --- CONFIG ---
 st.set_page_config(page_title="Passo Seguro", page_icon="👣", layout="wide")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- LIMPAR VALOR (.0 DO SHEETS) ---
+# --- FUNÇÕES ---
 def limpar_valor(v):
     v = str(v).strip()
     return v[:-2] if v.endswith(".0") else v
 
+def calcular_idade(nascimento):
+    try:
+        nasc = pd.to_datetime(nascimento)
+        hoje = datetime.today()
+        return hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
+    except:
+        return ""
 
 # --- LOGIN / CADASTRO ---
 def auth_system():
@@ -26,7 +33,7 @@ def auth_system():
 
         tab_login, tab_cadastro = st.tabs(["🔐 Login", "📝 Cadastro"])
 
-        # -------- LOGIN --------
+        # LOGIN
         with tab_login:
 
             email_login = st.text_input("E-mail")
@@ -34,51 +41,39 @@ def auth_system():
 
             if st.button("Entrar"):
 
-                try:
-                    df = conn.read(worksheet="usuarios", ttl=0)
-                    df.columns = [str(c).strip().lower() for c in df.columns]
+                df = conn.read(worksheet="usuarios", ttl=0)
+                df.columns = [str(c).strip().lower() for c in df.columns]
 
-                    df["email_c"] = df["email"].astype(str).str.strip().str.lower()
-                    df["senha_c"] = df["senha"].apply(limpar_valor)
+                df["email_c"] = df["email"].astype(str).str.strip().str.lower()
+                df["senha_c"] = df["senha"].apply(limpar_valor)
 
-                    email_digitado = email_login.strip().lower()
-                    senha_digitada = limpar_valor(senha_login)
+                user = df[
+                    (df["email_c"] == email_login.strip().lower()) &
+                    (df["senha_c"] == limpar_valor(senha_login))
+                ]
 
-                    user = df[
-                        (df["email_c"] == email_digitado) &
-                        (df["senha_c"] == senha_digitada)
-                    ]
+                if not user.empty:
 
-                    if not user.empty:
+                    u = user.iloc[0]
 
-                        u = user.iloc[0]
+                    st.session_state.authenticated = True
+                    st.session_state.usuario_nome = u.get("nome","")
 
-                        cidade = "" if pd.isna(u.get("cidade")) else str(u.get("cidade")).strip()
-                        uf = "" if pd.isna(u.get("uf")) else str(u.get("uf")).strip()
+                    st.session_state.dados_paciente = {
+                        "Nome": u.get("nome",""),
+                        "Cidade": "" if pd.isna(u.get("cidade")) else str(u.get("cidade")),
+                        "UF": "" if pd.isna(u.get("uf")) else str(u.get("uf")),
+                        "Telefone": u.get("telefone",""),
+                        "Nascimento": u.get("nascimento","")
+                    }
 
-                        st.session_state.authenticated = True
-                        st.session_state.usuario_nome = u.get("nome", "")
+                    st.session_state.etapa = 0
+                    st.session_state.lembrete_ok = False
+                    st.rerun()
+                else:
+                    st.error("Login inválido")
 
-                        st.session_state.dados_paciente = {
-                            "Nome": u.get("nome", ""),
-                            "Cidade": cidade,
-                            "UF": uf,
-                            "Telefone": u.get("telefone", ""),
-                            "Nascimento": u.get("nascimento", "")
-                        }
-
-                        st.session_state.lembrete_ok = False
-                        st.session_state.etapa = 0
-
-                        st.rerun()
-
-                    else:
-                        st.error("Login inválido")
-
-                except Exception as e:
-                    st.error(f"Erro: {e}")
-
-        # -------- CADASTRO --------
+        # CADASTRO
         with tab_cadastro:
 
             nome = st.text_input("Nome")
@@ -97,12 +92,12 @@ def auth_system():
                     df = conn.read(worksheet="usuarios", ttl=0)
 
                     novo = pd.DataFrame([{
-                        "nome": nome.strip(),
-                        "email": email.strip().lower(),
-                        "senha": senha.strip(),
-                        "cidade": cidade.strip(),
+                        "nome": nome,
+                        "email": email.lower(),
+                        "senha": senha,
+                        "cidade": cidade,
                         "uf": uf,
-                        "telefone": telefone.strip(),
+                        "telefone": telefone,
                         "nascimento": str(nascimento)
                     }])
 
@@ -114,7 +109,6 @@ def auth_system():
                     st.warning("Preencha os campos obrigatórios")
 
         return False
-
     return True
 
 
@@ -124,7 +118,7 @@ if auth_system():
     if "etapa" not in st.session_state:
         st.session_state.etapa = 0
 
-    # -------- SIDEBAR --------
+    # SIDEBAR
     st.sidebar.markdown(f"👤 {st.session_state.usuario_nome}")
 
     if st.sidebar.button("🏠 Página Inicial"):
@@ -143,43 +137,43 @@ if auth_system():
         st.session_state.authenticated = False
         st.rerun()
 
-    # -------- LEMBRETE --------
+    # LEMBRETE
     if not st.session_state.lembrete_ok:
         st.warning("🔔 Já olhou seus pés hoje?")
         if st.button("Sim, já olhei"):
             st.session_state.lembrete_ok = True
-            st.success("Excelente autocuidado 👏")
+            st.success("Ótimo autocuidado 👏")
             st.rerun()
 
-    # -------- ETAPA 0: HOME --------
+    # HOME
     if st.session_state.etapa == 0:
 
-        st.markdown("## 👣 Bem-vindo ao Passo Seguro")
+        st.markdown("## 👣 Bem-vindo")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### 🩸 Cuidados com Diabetes")
-            st.info("Controle sua glicemia regularmente")
-            st.info("Use corretamente sua medicação")
-            st.info("Pratique atividade física")
+            st.markdown("### 🩸 Diabetes")
+            st.info("Controle glicemia")
+            st.info("Use medicação corretamente")
+            st.info("Faça atividade física")
 
         with col2:
             st.markdown("### 🥗 Alimentação")
             st.info("Prefira alimentos naturais")
-            st.info("Evite açúcar e ultraprocessados")
-            st.info("Beba bastante água")
+            st.info("Evite açúcar")
+            st.info("Beba água")
 
-        st.markdown("### 👣 Cuidados com os pés")
-        st.info("Observe seus pés diariamente")
-        st.info("Hidrate (não entre os dedos)")
-        st.info("Use calçados adequados")
+        st.markdown("### 👣 Pés")
+        st.info("Observe diariamente")
+        st.info("Hidrate (não entre dedos)")
+        st.info("Use calçado adequado")
 
         if st.button("➡️ Iniciar Avaliação"):
             st.session_state.etapa = 2
             st.rerun()
 
-    # -------- ETAPA 1: EDITAR PERFIL --------
+    # EDITAR PERFIL
     elif st.session_state.etapa == 1:
 
         p = st.session_state.dados_paciente
@@ -199,18 +193,19 @@ if auth_system():
                 "UF": uf
             })
 
-            st.success("Perfil atualizado")
+            st.success("Atualizado")
             st.session_state.etapa = 0
             st.rerun()
 
-    # -------- ETAPA 2: AVALIAÇÃO --------
+    # AVALIAÇÃO
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
+        idade = calcular_idade(p.get("Nascimento",""))
 
         cidade_fmt = f"{p['Cidade']}-{p['UF']}" if p["Cidade"] else "Não informada"
 
-        st.markdown("## 🩺 Avaliação de Autocuidado")
+        st.markdown("## 🩺 Avaliação")
         st.write(f"Paciente: **{p['Nome']}** | Cidade: **{cidade_fmt}**")
 
         col1, col2 = st.columns([2,1])
@@ -218,14 +213,18 @@ if auth_system():
         with col1:
 
             sexo = st.selectbox("Sexo", ["Masculino","Feminino","Outro"])
-            idade = st.number_input("Idade", 0, 120)
-            tempo = st.text_input("Tempo de Diabetes (anos)")
+            st.text_input("Idade", value=idade, disabled=True)
+
+            tempo = st.text_input("Tempo de Diabetes")
 
             calo = st.radio("Calosidade?", ["Não","Sim"])
             ulcera = st.radio("Úlcera?", ["Não","Sim"])
-            amputacao = st.radio("Histórico de amputação?", ["Não","Sim"])
+            amputacao = st.radio("Amputação?", ["Não","Sim"])
 
-            local = st.text_input("Localização")
+            local_amp = ""
+            if amputacao == "Sim":
+                local_amp = st.text_input("Local da amputação")
+
             obs = st.text_area("Observações")
 
             if st.button("Salvar avaliação"):
@@ -240,7 +239,7 @@ if auth_system():
                     "Calosidade": calo,
                     "Úlcera": ulcera,
                     "Amputação": amputacao,
-                    "Localização": local,
+                    "Local Amputação": local_amp,
                     "Data/Hora": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "Observações": obs
                 }
@@ -255,7 +254,7 @@ if auth_system():
 
             st.markdown("### 💡 Cuidados")
 
-            st.info("Olhe os pés todos os dias")
+            st.info("Olhe os pés diariamente")
             st.info("Hidrate (não entre os dedos)")
             st.info("Use calçado adequado")
 
