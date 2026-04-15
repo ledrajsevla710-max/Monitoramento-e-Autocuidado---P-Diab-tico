@@ -8,13 +8,13 @@ st.set_page_config(page_title="Passo Seguro", page_icon="👣", layout="wide")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- FUNÇÃO PARA LIMPAR VALORES (.0 DO SHEETS) ---
+# --- LIMPAR VALOR (.0 DO SHEETS) ---
 def limpar_valor(v):
     v = str(v).strip()
     return v[:-2] if v.endswith(".0") else v
 
 
-# --- AUTENTICAÇÃO ---
+# --- LOGIN / CADASTRO ---
 def auth_system():
 
     if "authenticated" not in st.session_state:
@@ -26,7 +26,7 @@ def auth_system():
 
         tab_login, tab_cadastro = st.tabs(["🔐 Login", "📝 Cadastro"])
 
-        # ---------------- LOGIN ----------------
+        # -------- LOGIN --------
         with tab_login:
 
             email_login = st.text_input("E-mail")
@@ -68,7 +68,7 @@ def auth_system():
                         }
 
                         st.session_state.lembrete_ok = False
-                        st.session_state.etapa = 2
+                        st.session_state.etapa = 0
 
                         st.rerun()
 
@@ -78,7 +78,7 @@ def auth_system():
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-        # ---------------- CADASTRO ----------------
+        # -------- CADASTRO --------
         with tab_cadastro:
 
             nome = st.text_input("Nome")
@@ -86,40 +86,30 @@ def auth_system():
             senha = st.text_input("Senha", type="password")
             telefone = st.text_input("Telefone")
             nascimento = st.date_input("Data de nascimento")
-
             cidade = st.text_input("Cidade")
 
-            uf = st.selectbox(
-                "UF",
-                ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"],
-                index=17
-            )
+            uf = st.selectbox("UF", ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"], index=17)
 
             if st.button("Cadastrar"):
 
                 if nome and email and senha and cidade:
 
-                    try:
-                        df = conn.read(worksheet="usuarios", ttl=0)
+                    df = conn.read(worksheet="usuarios", ttl=0)
 
-                        novo = pd.DataFrame([{
-                            "nome": nome.strip(),
-                            "email": email.strip().lower(),
-                            "senha": senha.strip(),
-                            "cidade": cidade.strip(),
-                            "uf": uf,
-                            "telefone": telefone.strip(),
-                            "nascimento": str(nascimento)
-                        }])
+                    novo = pd.DataFrame([{
+                        "nome": nome.strip(),
+                        "email": email.strip().lower(),
+                        "senha": senha.strip(),
+                        "cidade": cidade.strip(),
+                        "uf": uf,
+                        "telefone": telefone.strip(),
+                        "nascimento": str(nascimento)
+                    }])
 
-                        df = pd.concat([df, novo], ignore_index=True)
-                        conn.update(worksheet="usuarios", data=df)
+                    df = pd.concat([df, novo], ignore_index=True)
+                    conn.update(worksheet="usuarios", data=df)
 
-                        st.success("Cadastro realizado!")
-
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-
+                    st.success("Cadastro realizado!")
                 else:
                     st.warning("Preencha os campos obrigatórios")
 
@@ -128,33 +118,69 @@ def auth_system():
     return True
 
 
-# ---------------- APP ----------------
+# --- APP ---
 if auth_system():
 
     if "etapa" not in st.session_state:
-        st.session_state.etapa = 2
+        st.session_state.etapa = 0
 
-    # --- SIDEBAR ---
+    # -------- SIDEBAR --------
     st.sidebar.markdown(f"👤 {st.session_state.usuario_nome}")
 
-    if st.sidebar.button("Editar Perfil"):
+    if st.sidebar.button("🏠 Página Inicial"):
+        st.session_state.etapa = 0
+        st.rerun()
+
+    if st.sidebar.button("🩺 Nova Avaliação"):
+        st.session_state.etapa = 2
+        st.rerun()
+
+    if st.sidebar.button("✏️ Editar Perfil"):
         st.session_state.etapa = 1
         st.rerun()
 
-    if st.sidebar.button("Sair"):
+    if st.sidebar.button("🚪 Sair"):
         st.session_state.authenticated = False
         st.rerun()
 
-    # --- LEMBRETE ---
+    # -------- LEMBRETE --------
     if not st.session_state.lembrete_ok:
         st.warning("🔔 Já olhou seus pés hoje?")
         if st.button("Sim, já olhei"):
             st.session_state.lembrete_ok = True
-            st.success("Excelente cuidado 👏")
+            st.success("Excelente autocuidado 👏")
             st.rerun()
 
-    # ---------------- EDITAR PERFIL ----------------
-    if st.session_state.etapa == 1:
+    # -------- ETAPA 0: HOME --------
+    if st.session_state.etapa == 0:
+
+        st.markdown("## 👣 Bem-vindo ao Passo Seguro")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 🩸 Cuidados com Diabetes")
+            st.info("Controle sua glicemia regularmente")
+            st.info("Use corretamente sua medicação")
+            st.info("Pratique atividade física")
+
+        with col2:
+            st.markdown("### 🥗 Alimentação")
+            st.info("Prefira alimentos naturais")
+            st.info("Evite açúcar e ultraprocessados")
+            st.info("Beba bastante água")
+
+        st.markdown("### 👣 Cuidados com os pés")
+        st.info("Observe seus pés diariamente")
+        st.info("Hidrate (não entre os dedos)")
+        st.info("Use calçados adequados")
+
+        if st.button("➡️ Iniciar Avaliação"):
+            st.session_state.etapa = 2
+            st.rerun()
+
+    # -------- ETAPA 1: EDITAR PERFIL --------
+    elif st.session_state.etapa == 1:
 
         p = st.session_state.dados_paciente
 
@@ -174,10 +200,10 @@ if auth_system():
             })
 
             st.success("Perfil atualizado")
-            st.session_state.etapa = 2
+            st.session_state.etapa = 0
             st.rerun()
 
-    # ---------------- AVALIAÇÃO ----------------
+    # -------- ETAPA 2: AVALIAÇÃO --------
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
@@ -191,16 +217,32 @@ if auth_system():
 
         with col1:
 
-            calo = st.radio("Calo?", ["Não","Sim"])
-            ulcera = st.radio("Ferida?", ["Não","Sim"])
+            sexo = st.selectbox("Sexo", ["Masculino","Feminino","Outro"])
+            idade = st.number_input("Idade", 0, 120)
+            tempo = st.text_input("Tempo de Diabetes (anos)")
+
+            calo = st.radio("Calosidade?", ["Não","Sim"])
+            ulcera = st.radio("Úlcera?", ["Não","Sim"])
+            amputacao = st.radio("Histórico de amputação?", ["Não","Sim"])
+
+            local = st.text_input("Localização")
+            obs = st.text_area("Observações")
 
             if st.button("Salvar avaliação"):
 
                 registro = {
-                    **p,
-                    "Calo": calo,
-                    "Ulcera": ulcera,
-                    "Data": datetime.now().strftime("%d/%m/%Y %H:%M")
+                    "Nome": p['Nome'],
+                    "Nascimento": p['Nascimento'],
+                    "Idade": idade,
+                    "Sexo": sexo,
+                    "Cidade": p['Cidade'],
+                    "Tempo Diabetes": tempo,
+                    "Calosidade": calo,
+                    "Úlcera": ulcera,
+                    "Amputação": amputacao,
+                    "Localização": local,
+                    "Data/Hora": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "Observações": obs
                 }
 
                 df = conn.read()
@@ -211,14 +253,14 @@ if auth_system():
 
         with col2:
 
-            st.markdown("### 💡 Cuidados com os pés")
+            st.markdown("### 💡 Cuidados")
 
-            st.info("👀 Olhe seus pés todos os dias")
-            st.info("🧴 Hidrate (não entre os dedos)")
-            st.info("👟 Use calçado adequado")
+            st.info("Olhe os pés todos os dias")
+            st.info("Hidrate (não entre os dedos)")
+            st.info("Use calçado adequado")
 
             if ulcera == "Sim":
-                st.error("⚠️ Procure uma UPA imediatamente")
+                st.error("🚨 Procure uma UPA imediatamente")
 
             elif calo == "Sim":
-                st.warning("⚠️ Procure avaliação com profissional de saúde")
+                st.warning("⚠️ Procure um profissional de saúde")
