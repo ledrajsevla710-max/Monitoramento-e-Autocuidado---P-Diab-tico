@@ -15,20 +15,14 @@ def limpar_valor(v):
 def calcular_idade(nascimento):
     try:
         nasc = pd.to_datetime(str(nascimento), errors="coerce")
-
         if pd.isna(nasc):
             return "Não informado"
-
         hoje = datetime.today()
-        idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
-
-        return int(idade)
-
+        return hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
     except:
         return "Não informado"
 
-
-# --- LOGIN ---
+# --- LOGIN / CADASTRO ---
 def auth_system():
 
     if "authenticated" not in st.session_state:
@@ -40,6 +34,7 @@ def auth_system():
 
         tab_login, tab_cadastro = st.tabs(["Login", "Cadastro"])
 
+        # LOGIN
         with tab_login:
             email = st.text_input("Email", key="login_email")
             senha = st.text_input("Senha", type="password", key="login_senha")
@@ -78,6 +73,7 @@ def auth_system():
                 else:
                     st.error("Login inválido")
 
+        # CADASTRO
         with tab_cadastro:
             nome = st.text_input("Nome", key="cad_nome")
             email = st.text_input("Email", key="cad_email")
@@ -85,7 +81,10 @@ def auth_system():
             nascimento = st.date_input("Nascimento", key="cad_nasc")
             cidade = st.text_input("Cidade", key="cad_cidade")
 
-            uf = st.selectbox("UF", ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"], index=17)
+            uf = st.selectbox("UF",
+                ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"],
+                index=17
+            )
 
             if st.button("Cadastrar", key="btn_cad"):
                 df = conn.read(worksheet="usuarios", ttl=0)
@@ -149,23 +148,28 @@ if auth_system():
         p = st.session_state.dados_paciente
         idade = calcular_idade(p.get("Nascimento"))
 
-        st.markdown("## 🩺 Avaliação")
+        st.markdown("## 🩺 Avaliação Clínica")
 
-        st.text_input("Idade", value=idade, disabled=True)
+        st.write(f"Paciente: **{p['Nome']}** | Idade: **{idade}**")
 
         calo = st.radio("Calosidade?", ["Não","Sim"])
         ulcera = st.radio("Úlcera?", ["Não","Sim"])
+        amputacao = st.radio("Amputação?", ["Não","Sim"])
+
+        local_amp = ""
+        if amputacao == "Sim":
+            local_amp = st.text_input("Local da amputação")
 
         if ulcera == "Sim":
             risco = "ALTO"
             st.error("🚨 Procurar UPA imediatamente")
         elif calo == "Sim":
             risco = "MÉDIO"
-            st.warning("⚠️ Procurar avaliação")
+            st.warning("⚠️ Procurar avaliação profissional")
         else:
             risco = "BAIXO"
 
-        if st.button("Salvar"):
+        if st.button("Salvar avaliação"):
 
             df = conn.read(worksheet="avaliacoes")
 
@@ -176,6 +180,8 @@ if auth_system():
                 "Cidade": p["Cidade"],
                 "Calosidade": calo,
                 "Úlcera": ulcera,
+                "Amputação": amputacao,
+                "Local Amputação": local_amp,
                 "Risco": risco,
                 "Data": datetime.now().strftime("%d/%m/%Y %H:%M")
             }
@@ -183,14 +189,15 @@ if auth_system():
             df = pd.concat([df, pd.DataFrame([registro])], ignore_index=True)
             conn.update(worksheet="avaliacoes", data=df)
 
-            st.success("Salvo com sucesso!")
+            st.success("Avaliação salva com sucesso!")
 
         # HISTÓRICO
-        st.markdown("### Histórico")
+        st.markdown("### 📊 Histórico")
 
         df_hist = conn.read(worksheet="avaliacoes")
-
         df_p = df_hist[df_hist["Nome"] == p["Nome"]]
 
         if not df_p.empty:
             st.dataframe(df_p.tail(5))
+        else:
+            st.info("Sem histórico ainda")
