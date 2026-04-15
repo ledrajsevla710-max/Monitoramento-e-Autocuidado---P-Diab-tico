@@ -47,7 +47,6 @@ def auth_system():
 
                 df = df.astype(str)
                 df["email"] = df["email"].str.strip().str.lower()
-
                 df["senha_c"] = df["senha"].apply(limpar_valor)
 
                 user = df[
@@ -158,35 +157,72 @@ if auth_system():
     if st.session_state.etapa == 0:
 
         st.markdown("## 👣 Bem-vindo ao Passo Seguro")
-        st.markdown("### 🩺 Autocuidado no Diabetes")
 
-        st.divider()
-
-        st.markdown("### 🔎 Buscar informações confiáveis")
-        busca = st.text_input("Digite o que deseja pesquisar (ex: pé diabético)")
+        st.markdown("### 🔎 Buscar informações")
+        busca = st.text_input("Pesquisar sobre saúde")
         if busca:
             st.markdown(f"[🔍 Buscar no Google](https://www.google.com/search?q={busca})")
-
-        st.divider()
 
         st.markdown("### 🌐 Sites confiáveis")
         st.markdown("[Ministério da Saúde](https://www.gov.br/saude)")
         st.markdown("[Sociedade Brasileira de Diabetes](https://diabetes.org.br)")
         st.markdown("[Fiocruz](https://portal.fiocruz.br)")
 
-        st.divider()
-
         st.markdown("### 👣 Cuidados essenciais")
         st.success("✔ Examine os pés diariamente")
         st.success("✔ Hidrate (não entre os dedos)")
         st.success("✔ Use calçado adequado")
-        st.success("✔ Nunca ande descalço")
 
         if st.button("🩺 Iniciar Avaliação"):
             st.session_state.etapa = 2
             st.rerun()
 
-    # AVALIAÇÃO
+    # EDITAR PERFIL
+    elif st.session_state.etapa == 1:
+
+        p = st.session_state.dados_paciente
+
+        nome = st.text_input("Nome", p["Nome"])
+        telefone = st.text_input("Telefone", p["Telefone"])
+
+        nasc_dt = pd.to_datetime(str(p.get("Nascimento")), errors="coerce")
+        if pd.isna(nasc_dt):
+            nasc_dt = datetime(2000, 1, 1)
+
+        nascimento = st.date_input("Data de nascimento", value=nasc_dt)
+        cidade = st.text_input("Cidade", p["Cidade"])
+
+        uf = st.selectbox("UF", ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"], index=17)
+
+        if st.button("Salvar alterações"):
+
+            df = conn.read(worksheet="usuarios", ttl=0)
+            df = df.astype(str)
+            df["email"] = df["email"].str.strip().str.lower()
+
+            filtro = df["email"] == st.session_state.usuario_email.lower()
+
+            df.loc[filtro, "nome"] = nome
+            df.loc[filtro, "telefone"] = telefone
+            df.loc[filtro, "cidade"] = cidade
+            df.loc[filtro, "uf"] = uf
+            df.loc[filtro, "nascimento"] = str(nascimento)
+
+            conn.update(worksheet="usuarios", data=df)
+
+            st.session_state.dados_paciente.update({
+                "Nome": nome,
+                "Telefone": telefone,
+                "Cidade": cidade,
+                "UF": uf,
+                "Nascimento": str(nascimento)
+            })
+
+            st.success("Perfil atualizado!")
+            st.session_state.etapa = 0
+            st.rerun()
+
+    # AVALIAÇÃO + HISTÓRICO
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
@@ -197,9 +233,52 @@ if auth_system():
 
         calo = st.radio("Calosidade?", ["Não","Sim"])
         ulcera = st.radio("Úlcera?", ["Não","Sim"])
+        amputacao = st.radio("Amputação?", ["Não","Sim"])
+
+        local_amp = ""
+        if amputacao == "Sim":
+            local_amp = st.text_input("Local da amputação")
 
         if ulcera == "Sim":
+            risco = "ALTO"
             st.error("🚨 Procure atendimento imediato")
+        elif calo == "Sim":
+            risco = "MÉDIO"
+            st.warning("⚠️ Procure avaliação profissional")
+        else:
+            risco = "BAIXO"
 
-        if st.button("Salvar"):
-            st.success("Avaliação registrada")
+        if st.button("Salvar avaliação"):
+
+            df = conn.read(worksheet="avaliacoes")
+            df = df.astype(str)
+
+            registro = {
+                "Nome": p["Nome"],
+                "Idade": idade,
+                "Cidade": p["Cidade"],
+                "Calosidade": calo,
+                "Úlcera": ulcera,
+                "Amputação": amputacao,
+                "Local Amputação": local_amp,
+                "Risco": risco,
+                "Data": datetime.now().strftime("%d/%m/%Y %H:%M")
+            }
+
+            df = pd.concat([df, pd.DataFrame([registro])], ignore_index=True)
+            conn.update(worksheet="avaliacoes", data=df)
+
+            st.success("Avaliação salva!")
+
+        # HISTÓRICO
+        st.markdown("### 📊 Histórico do paciente")
+
+        df_hist = conn.read(worksheet="avaliacoes")
+        df_hist = df_hist.astype(str)
+
+        df_p = df_hist[df_hist["Nome"] == p["Nome"]]
+
+        if not df_p.empty:
+            st.dataframe(df_p.tail(5), use_container_width=True)
+        else:
+            st.info("Nenhuma avaliação registrada.")
