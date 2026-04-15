@@ -15,16 +15,22 @@ def limpar_valor(v):
 
 def calcular_idade(nascimento):
     try:
-        if nascimento is None or nascimento == "":
+        if not nascimento:
             return "Não informado"
+
         nasc = pd.to_datetime(nascimento, errors="coerce")
+
         if pd.isna(nasc):
             return "Não informado"
+
         hoje = datetime.today()
         idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
+
         return int(idade)
+
     except:
         return "Não informado"
+
 
 # --- LOGIN / CADASTRO ---
 def auth_system():
@@ -40,10 +46,12 @@ def auth_system():
 
         # LOGIN
         with tab_login:
+
             email_login = st.text_input("E-mail", key="login_email")
             senha_login = st.text_input("Senha", type="password", key="login_senha")
 
             if st.button("Entrar", key="btn_login"):
+
                 df = conn.read(worksheet="usuarios", ttl=0)
                 df.columns = [str(c).strip().lower() for c in df.columns]
 
@@ -56,27 +64,41 @@ def auth_system():
                 ]
 
                 if not user.empty:
+
                     u = user.iloc[0]
 
+                    # 🔥 CORREÇÃO DA DATA
+                    nascimento_val = u.get("nascimento")
+
+                    if pd.isna(nascimento_val):
+                        nascimento_val = ""
+                    else:
+                        nascimento_val = str(nascimento_val)
+
+                    cidade_val = "" if pd.isna(u.get("cidade")) else str(u.get("cidade"))
+                    uf_val = "" if pd.isna(u.get("uf")) else str(u.get("uf"))
+
                     st.session_state.authenticated = True
-                    st.session_state.usuario_nome = u.get("nome","")
+                    st.session_state.usuario_nome = u.get("nome", "")
 
                     st.session_state.dados_paciente = {
-                        "Nome": u.get("nome",""),
-                        "Cidade": "" if pd.isna(u.get("cidade")) else str(u.get("cidade")),
-                        "UF": "" if pd.isna(u.get("uf")) else str(u.get("uf")),
-                        "Telefone": u.get("telefone",""),
-                        "Nascimento": u.get("nascimento","")
+                        "Nome": u.get("nome", ""),
+                        "Cidade": cidade_val,
+                        "UF": uf_val,
+                        "Telefone": u.get("telefone", ""),
+                        "Nascimento": nascimento_val
                     }
 
                     st.session_state.etapa = 0
                     st.session_state.lembrete_ok = False
                     st.rerun()
+
                 else:
                     st.error("Login inválido")
 
         # CADASTRO
         with tab_cadastro:
+
             nome = st.text_input("Nome", key="cad_nome")
             email = st.text_input("Email", key="cad_email")
             senha = st.text_input("Senha", type="password", key="cad_senha")
@@ -84,7 +106,8 @@ def auth_system():
             nascimento = st.date_input("Data de nascimento", key="cad_nasc")
             cidade = st.text_input("Cidade", key="cad_cidade")
 
-            uf = st.selectbox("UF",
+            uf = st.selectbox(
+                "UF",
                 ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"],
                 index=17,
                 key="cad_uf"
@@ -93,6 +116,7 @@ def auth_system():
             if st.button("Cadastrar", key="btn_cad"):
 
                 if nome and email and senha and cidade:
+
                     df = conn.read(worksheet="usuarios", ttl=0)
 
                     novo = pd.DataFrame([{
@@ -122,6 +146,7 @@ if auth_system():
     if "etapa" not in st.session_state:
         st.session_state.etapa = 0
 
+    # SIDEBAR
     st.sidebar.markdown(f"👤 {st.session_state.usuario_nome}")
 
     if st.sidebar.button("🏠 Página Inicial"):
@@ -146,19 +171,20 @@ if auth_system():
 
     # HOME
     if st.session_state.etapa == 0:
+
         st.markdown("## 👣 Educação em Saúde")
 
-        st.info("🩸 Controle glicemia regularmente e conforme orientação médica")
+        st.info("🩸 Controle glicemia regularmente e conforme orientação")
         st.info("🥗 Evite açúcar e alimentos ultraprocessados")
-        st.info("💧 Hidrate-se bem ao longo do dia")
+        st.info("💧 Beba bastante água")
 
         st.markdown("### 👣 Cuidados com os pés")
 
-        st.success("✔ Examine seus pés TODOS os dias (use espelho se necessário)")
+        st.success("✔ Examine os pés todos os dias")
         st.success("✔ Lave com água morna e sabão neutro")
-        st.success("✔ Seque bem, principalmente entre os dedos")
-        st.success("✔ Hidrate a pele (NÃO entre os dedos)")
-        st.success("✔ Use calçados fechados e confortáveis")
+        st.success("✔ Seque bem entre os dedos")
+        st.success("✔ Hidrate a pele (não entre os dedos)")
+        st.success("✔ Use calçados fechados")
         st.success("✔ Nunca ande descalço")
 
         if st.button("➡️ Iniciar Avaliação"):
@@ -169,7 +195,7 @@ if auth_system():
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
-        idade = calcular_idade(p.get("Nascimento",""))
+        idade = calcular_idade(p.get("Nascimento"))
 
         st.markdown("## 🩺 Avaliação de Autocuidado")
 
@@ -177,20 +203,20 @@ if auth_system():
 
         with col1:
 
-            sexo = st.selectbox("Sexo", ["Masculino","Feminino","Outro"])
+            sexo = st.selectbox("Sexo", ["Masculino","Feminino","Outro"], key="sexo")
             st.text_input("Idade", value=idade, disabled=True)
 
             tempo = st.text_input("Tempo de Diabetes")
 
-            calo = st.radio("Presença de calosidade?", ["Não","Sim"])
-            ulcera = st.radio("Presença de úlcera/ferida?", ["Não","Sim"])
-            amputacao = st.radio("Histórico de amputação?", ["Não","Sim"])
+            calo = st.radio("Calosidade?", ["Não","Sim"])
+            ulcera = st.radio("Úlcera?", ["Não","Sim"])
+            amputacao = st.radio("Amputação?", ["Não","Sim"])
 
             local_amp = ""
             if amputacao == "Sim":
                 local_amp = st.text_input("Local da amputação")
 
-            obs = st.text_area("Observações clínicas")
+            obs = st.text_area("Observações")
 
             if st.button("Salvar avaliação"):
 
@@ -228,17 +254,17 @@ if auth_system():
 
             st.markdown("### 💡 Orientações Clínicas")
 
-            st.info("👀 Inspecione pés diariamente (feridas, bolhas, rachaduras)")
-            st.info("🧴 Hidrate a pele (evite entre os dedos)")
-            st.info("🧦 Use meias limpas e sem costura apertada")
-            st.info("👟 Use sapatos fechados e confortáveis")
-            st.info("🔥 Nunca use água muito quente")
+            st.info("👀 Examine os pés diariamente")
+            st.info("🧴 Hidrate (não entre os dedos)")
+            st.info("🧦 Use meias limpas")
+            st.info("👟 Use calçado adequado")
+            st.info("🔥 Evite água quente")
 
             if ulcera == "Sim":
-                st.error("🚨 ENCAMINHAR IMEDIATAMENTE PARA UPA OU SERVIÇO ESPECIALIZADO")
+                st.error("🚨 ENCAMINHAR IMEDIATAMENTE PARA UPA")
 
             elif calo == "Sim":
-                st.warning("⚠️ Encaminhar para avaliação profissional (risco de lesão)")
+                st.warning("⚠️ Procurar avaliação profissional")
 
         # HISTÓRICO
         st.markdown("### 📊 Histórico")
