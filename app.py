@@ -97,4 +97,29 @@ if auth_system():
         .alerta-card { padding: 15px; border-radius: 10px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; margin-top: 10px; font-weight: bold; }
         .lembrete-pes { background-color: #ffeb3b; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; color: black; margin-bottom: 20px; border: 2px dashed #f44336; }
         </style>
-        """, unsafe_allow_html=True) 
+        """, unsafe_allow_html=True)
+
+    if 'etapa' not in st.session_state: st.session_state.etapa = 2
+    
+    # --- BARRA LATERAL SEGURA ---
+    st.sidebar.markdown(f"### 👤 {st.session_state.usuario_nome}")
+    
+    if st.sidebar.button("🏠 Início / Nova Avaliação"):
+        st.session_state.etapa = 2
+        st.rerun()
+
+    if st.sidebar.button("✏️ Editar Perfil"):
+        st.session_state.etapa = 1
+        st.rerun()
+
+    st.sidebar.divider()
+    if st.sidebar.button("🚪 Sair do Sistema"):
+        st.session_state.authenticated = False
+        st.rerun()
+
+    # --- LEMBRETE FIXO ---
+    st.markdown('<div class="lembrete-pes">🔔 LEMBRETE DIÁRIO: Já olhou seus pés hoje? Verifique feridas, bolhas ou manchas!</div>', unsafe_allow_html=True)
+
+    # --- ETAPA 1: EDITAR PERFIL ---
+    if st.session_state.etapa == 1:
+        st.markdown("<h2 style=') 
