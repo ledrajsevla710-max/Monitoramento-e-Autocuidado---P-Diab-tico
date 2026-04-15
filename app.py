@@ -43,40 +43,37 @@ def auth_system():
 
             if st.button("Entrar", key="btn_login"):
 
-                try:
-                    df = conn.read(worksheet="usuarios", ttl=0)
-                    df.columns = [str(c).strip().lower() for c in df.columns]
+                df = conn.read(worksheet="usuarios", ttl=0)
+                df.columns = [str(c).strip().lower() for c in df.columns]
 
-                    df["email_c"] = df["email"].astype(str).str.strip().str.lower()
-                    df["senha_c"] = df["senha"].apply(limpar_valor)
+                df["email_c"] = df["email"].astype(str).str.strip().str.lower()
+                df["senha_c"] = df["senha"].apply(limpar_valor)
 
-                    user = df[
-                        (df["email_c"] == email_login.strip().lower()) &
-                        (df["senha_c"] == limpar_valor(senha_login))
-                    ]
+                user = df[
+                    (df["email_c"] == email_login.strip().lower()) &
+                    (df["senha_c"] == limpar_valor(senha_login))
+                ]
 
-                    if not user.empty:
-                        u = user.iloc[0]
+                if not user.empty:
+                    u = user.iloc[0]
 
-                        st.session_state.authenticated = True
-                        st.session_state.usuario_nome = u.get("nome", "")
+                    st.session_state.authenticated = True
+                    st.session_state.usuario_nome = u.get("nome", "")
+                    st.session_state.usuario_email = u.get("email", "")
 
-                        st.session_state.dados_paciente = {
-                            "Nome": u.get("nome", ""),
-                            "Cidade": "" if pd.isna(u.get("cidade")) else str(u.get("cidade")),
-                            "UF": "" if pd.isna(u.get("uf")) else str(u.get("uf")),
-                            "Telefone": u.get("telefone", ""),
-                            "Nascimento": "" if pd.isna(u.get("nascimento")) else str(u.get("nascimento"))
-                        }
+                    st.session_state.dados_paciente = {
+                        "Nome": u.get("nome", ""),
+                        "Cidade": "" if pd.isna(u.get("cidade")) else str(u.get("cidade")),
+                        "UF": "" if pd.isna(u.get("uf")) else str(u.get("uf")),
+                        "Telefone": u.get("telefone", ""),
+                        "Nascimento": "" if pd.isna(u.get("nascimento")) else str(u.get("nascimento"))
+                    }
 
-                        st.session_state.etapa = 0
-                        st.session_state.lembrete_ok = False
-                        st.rerun()
-                    else:
-                        st.error("Login inválido")
-
-                except Exception as e:
-                    st.error(f"Erro: {e}")
+                    st.session_state.etapa = 0
+                    st.session_state.lembrete_ok = False
+                    st.rerun()
+                else:
+                    st.error("Login inválido")
 
         # CADASTRO
         with tab_cadastro:
@@ -99,25 +96,22 @@ def auth_system():
 
                 if nome and email and senha and cidade:
 
-                    try:
-                        df = conn.read(worksheet="usuarios", ttl=0)
+                    df = conn.read(worksheet="usuarios", ttl=0)
 
-                        novo = pd.DataFrame([{
-                            "nome": nome.strip(),
-                            "email": email.strip().lower(),
-                            "senha": senha.strip(),
-                            "cidade": cidade.strip(),
-                            "uf": uf,
-                            "telefone": telefone.strip(),
-                            "nascimento": str(nascimento)
-                        }])
+                    novo = pd.DataFrame([{
+                        "nome": nome.strip(),
+                        "email": email.strip().lower(),
+                        "senha": senha.strip(),
+                        "cidade": cidade.strip(),
+                        "uf": uf,
+                        "telefone": telefone.strip(),
+                        "nascimento": str(nascimento)
+                    }])
 
-                        df = pd.concat([df, novo], ignore_index=True)
-                        conn.update(worksheet="usuarios", data=df)
+                    df = pd.concat([df, novo], ignore_index=True)
+                    conn.update(worksheet="usuarios", data=df)
 
-                        st.success("Cadastro realizado!")
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
+                    st.success("Cadastro realizado!")
                 else:
                     st.warning("Preencha os campos obrigatórios")
 
@@ -154,9 +148,8 @@ if auth_system():
     # LEMBRETE
     if not st.session_state.lembrete_ok:
         st.warning("🔔 Já olhou seus pés hoje?")
-        if st.button("Sim, já olhei", key="btn_lembrete"):
+        if st.button("Sim, já olhei"):
             st.session_state.lembrete_ok = True
-            st.success("Ótimo autocuidado 👏")
             st.rerun()
 
     # HOME
@@ -164,100 +157,107 @@ if auth_system():
 
         st.markdown("## 👣 Bem-vindo ao Passo Seguro")
 
-        st.markdown("### 🩸 Diabetes")
-        st.info("Controle glicemia regularmente")
-        st.info("Use medicação corretamente")
-        st.info("Pratique atividade física")
-
-        st.markdown("### 🥗 Alimentação")
-        st.info("Prefira alimentos naturais")
-        st.info("Evite açúcar")
-        st.info("Beba água")
-
-        st.markdown("### 👣 Cuidados com os pés")
         st.success("✔ Examine os pés diariamente")
-        st.success("✔ Lave com água morna e sabão neutro")
-        st.success("✔ Seque bem (principalmente entre os dedos)")
         st.success("✔ Hidrate (não entre os dedos)")
-        st.success("✔ Use calçados fechados")
+        st.success("✔ Use calçado adequado")
         st.success("✔ Nunca ande descalço")
 
-        if st.button("➡️ Iniciar Avaliação", key="btn_inicio"):
-            st.session_state.etapa = 2
+    # EDITAR PERFIL (AGORA FUNCIONANDO DE VERDADE)
+    elif st.session_state.etapa == 1:
+
+        st.markdown("## ✏️ Editar Perfil")
+
+        p = st.session_state.dados_paciente
+
+        nome = st.text_input("Nome", p["Nome"])
+        telefone = st.text_input("Telefone", p["Telefone"])
+
+        try:
+            nasc_dt = pd.to_datetime(p["Nascimento"])
+        except:
+            nasc_dt = datetime.today()
+
+        nascimento = st.date_input("Data de nascimento", value=nasc_dt)
+
+        cidade = st.text_input("Cidade", p["Cidade"])
+
+        uf = st.selectbox(
+            "UF",
+            ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"],
+            index=17
+        )
+
+        if st.button("Salvar alterações"):
+
+            df = conn.read(worksheet="usuarios", ttl=0)
+
+            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "nome"] = nome
+            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "telefone"] = telefone
+            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "cidade"] = cidade
+            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "uf"] = uf
+            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "nascimento"] = str(nascimento)
+
+            conn.update(worksheet="usuarios", data=df)
+
+            st.session_state.dados_paciente.update({
+                "Nome": nome,
+                "Telefone": telefone,
+                "Cidade": cidade,
+                "UF": uf,
+                "Nascimento": str(nascimento)
+            })
+
+            st.success("Perfil atualizado!")
+            st.session_state.etapa = 0
             st.rerun()
 
     # AVALIAÇÃO
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
-        idade = calcular_idade(p.get("Nascimento", ""))
+        idade = calcular_idade(p.get("Nascimento"))
 
         st.markdown("## 🩺 Avaliação")
         st.write(f"Paciente: **{p['Nome']}** | Idade: **{idade}** | Cidade: **{p['Cidade']}-{p['UF']}**")
 
-        col1, col2 = st.columns([2,1])
+        calo = st.radio("Calosidade?", ["Não","Sim"])
+        ulcera = st.radio("Úlcera?", ["Não","Sim"])
+        amputacao = st.radio("Amputação?", ["Não","Sim"])
 
-        with col1:
+        local_amp = ""
+        if amputacao == "Sim":
+            local_amp = st.text_input("Local da amputação")
 
-            sexo = st.selectbox("Sexo", ["Masculino","Feminino","Outro"])
-            tempo = st.text_input("Tempo de Diabetes")
+        # CLASSIFICAÇÃO
+        if ulcera == "Sim":
+            risco = "ALTO"
+            st.error("🚨 Procurar UPA imediatamente")
+        elif calo == "Sim":
+            risco = "MÉDIO"
+            st.warning("⚠️ Procurar avaliação")
+        else:
+            risco = "BAIXO"
 
-            calo = st.radio("Calosidade?", ["Não","Sim"])
-            ulcera = st.radio("Úlcera?", ["Não","Sim"])
-            amputacao = st.radio("Amputação?", ["Não","Sim"])
+        if st.button("Salvar avaliação"):
 
-            local_amp = ""
-            if amputacao == "Sim":
-                local_amp = st.text_input("Local da amputação")
+            df = conn.read(worksheet="avaliacoes")
 
-            obs = st.text_area("Observações")
+            registro = {
+                "Nome": p["Nome"],
+                "Idade": idade,
+                "Cidade": p["Cidade"],
+                "Calosidade": calo,
+                "Úlcera": ulcera,
+                "Amputação": amputacao,
+                "Local Amputação": local_amp,
+                "Risco": risco,
+                "Data": datetime.now().strftime("%d/%m/%Y %H:%M")
+            }
 
-            # CLASSIFICAÇÃO
-            if ulcera == "Sim":
-                risco = "ALTO"
-            elif calo == "Sim":
-                risco = "MÉDIO"
-            else:
-                risco = "BAIXO"
+            df = pd.concat([df, pd.DataFrame([registro])], ignore_index=True)
+            conn.update(worksheet="avaliacoes", data=df)
 
-            if st.button("Salvar avaliação"):
-
-                df = conn.read(worksheet="avaliacoes")
-
-                registro = {
-                    "Nome": p['Nome'],
-                    "Idade": idade,
-                    "Sexo": sexo,
-                    "Cidade": p['Cidade'],
-                    "Tempo Diabetes": tempo,
-                    "Calosidade": calo,
-                    "Úlcera": ulcera,
-                    "Amputação": amputacao,
-                    "Local Amputação": local_amp,
-                    "Risco": risco,
-                    "Data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "Observações": obs
-                }
-
-                df = pd.concat([df, pd.DataFrame([registro])], ignore_index=True)
-                conn.update(worksheet="avaliacoes", data=df)
-
-                st.success(f"Avaliação salva! Risco: {risco}")
-
-        with col2:
-
-            st.markdown("### 💡 Cuidados")
-
-            st.info("👀 Examine os pés todos os dias")
-            st.info("🧴 Hidrate (não entre os dedos)")
-            st.info("👟 Use calçado adequado")
-            st.info("🔥 Evite água quente")
-
-            if ulcera == "Sim":
-                st.error("🚨 Procure uma UPA imediatamente")
-
-            elif calo == "Sim":
-                st.warning("⚠️ Procure um profissional de saúde")
+            st.success("Avaliação salva com sucesso!")
 
         # HISTÓRICO
         st.markdown("### 📊 Histórico")
@@ -267,5 +267,3 @@ if auth_system():
 
         if not df_p.empty:
             st.dataframe(df_p.tail(5))
-        else:
-            st.info("Sem histórico ainda")
