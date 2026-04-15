@@ -37,7 +37,6 @@ def auth_system():
 
         # LOGIN
         with tab_login:
-
             email_login = st.text_input("E-mail", key="login_email")
             senha_login = st.text_input("Senha", type="password", key="login_senha")
 
@@ -46,11 +45,13 @@ def auth_system():
                 df = conn.read(worksheet="usuarios", ttl=0)
                 df.columns = [str(c).strip().lower() for c in df.columns]
 
-                df["email_c"] = df["email"].astype(str).str.strip().str.lower()
+                df = df.astype(str)
+                df["email"] = df["email"].str.strip().str.lower()
+
                 df["senha_c"] = df["senha"].apply(limpar_valor)
 
                 user = df[
-                    (df["email_c"] == email_login.strip().lower()) &
+                    (df["email"] == email_login.strip().lower()) &
                     (df["senha_c"] == limpar_valor(senha_login))
                 ]
 
@@ -63,10 +64,10 @@ def auth_system():
 
                     st.session_state.dados_paciente = {
                         "Nome": u.get("nome", ""),
-                        "Cidade": "" if pd.isna(u.get("cidade")) else str(u.get("cidade")),
-                        "UF": "" if pd.isna(u.get("uf")) else str(u.get("uf")),
+                        "Cidade": u.get("cidade", ""),
+                        "UF": u.get("uf", ""),
                         "Telefone": u.get("telefone", ""),
-                        "Nascimento": "" if pd.isna(u.get("nascimento")) else str(u.get("nascimento"))
+                        "Nascimento": u.get("nascimento", "")
                     }
 
                     st.session_state.etapa = 0
@@ -97,6 +98,7 @@ def auth_system():
                 if nome and email and senha and cidade:
 
                     df = conn.read(worksheet="usuarios", ttl=0)
+                    df = df.astype(str)
 
                     novo = pd.DataFrame([{
                         "nome": nome.strip(),
@@ -162,7 +164,7 @@ if auth_system():
         st.success("✔ Use calçado adequado")
         st.success("✔ Nunca ande descalço")
 
-    # EDITAR PERFIL (CORRIGIDO)
+    # EDITAR PERFIL
     elif st.session_state.etapa == 1:
 
         st.markdown("## ✏️ Editar Perfil")
@@ -191,12 +193,17 @@ if auth_system():
         if st.button("Salvar alterações"):
 
             df = conn.read(worksheet="usuarios", ttl=0)
+            df = df.astype(str)
 
-            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "nome"] = nome
-            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "telefone"] = telefone
-            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "cidade"] = cidade
-            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "uf"] = uf
-            df.loc[df["email"].str.lower() == st.session_state.usuario_email.lower(), "nascimento"] = str(nascimento)
+            df["email"] = df["email"].str.strip().str.lower()
+
+            filtro = df["email"] == st.session_state.usuario_email.strip().lower()
+
+            df.loc[filtro, "nome"] = str(nome)
+            df.loc[filtro, "telefone"] = str(telefone)
+            df.loc[filtro, "cidade"] = str(cidade)
+            df.loc[filtro, "uf"] = str(uf)
+            df.loc[filtro, "nascimento"] = str(nascimento)
 
             conn.update(worksheet="usuarios", data=df)
 
@@ -241,6 +248,7 @@ if auth_system():
         if st.button("Salvar avaliação"):
 
             df = conn.read(worksheet="avaliacoes")
+            df = df.astype(str)
 
             registro = {
                 "Nome": p["Nome"],
