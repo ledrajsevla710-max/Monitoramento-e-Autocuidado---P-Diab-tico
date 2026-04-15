@@ -162,7 +162,7 @@ if auth_system():
         st.success("✔ Use calçado adequado")
         st.success("✔ Nunca ande descalço")
 
-    # EDITAR PERFIL (AGORA FUNCIONANDO DE VERDADE)
+    # EDITAR PERFIL (CORRIGIDO)
     elif st.session_state.etapa == 1:
 
         st.markdown("## ✏️ Editar Perfil")
@@ -172,10 +172,11 @@ if auth_system():
         nome = st.text_input("Nome", p["Nome"])
         telefone = st.text_input("Telefone", p["Telefone"])
 
-        try:
-            nasc_dt = pd.to_datetime(p["Nascimento"])
-        except:
-            nasc_dt = datetime.today()
+        nasc_raw = p.get("Nascimento", "")
+        nasc_dt = pd.to_datetime(str(nasc_raw), errors="coerce")
+
+        if pd.isna(nasc_dt):
+            nasc_dt = datetime(2000, 1, 1)
 
         nascimento = st.date_input("Data de nascimento", value=nasc_dt)
 
@@ -228,7 +229,6 @@ if auth_system():
         if amputacao == "Sim":
             local_amp = st.text_input("Local da amputação")
 
-        # CLASSIFICAÇÃO
         if ulcera == "Sim":
             risco = "ALTO"
             st.error("🚨 Procurar UPA imediatamente")
@@ -267,3 +267,5 @@ if auth_system():
 
         if not df_p.empty:
             st.dataframe(df_p.tail(5))
+        else:
+            st.info("Sem histórico ainda")
