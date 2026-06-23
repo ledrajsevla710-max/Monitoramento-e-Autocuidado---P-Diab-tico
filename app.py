@@ -82,7 +82,15 @@ def auth_system():
             email = st.text_input("Email", key="cad_email")
             senha = st.text_input("Senha", type="password", key="cad_senha")
             telefone = st.text_input("Telefone", key="cad_tel")
-            nascimento = st.date_input("Data de nascimento", key="cad_nasc")
+         from datetime import date
+
+nascimento = st.date_input(
+    "Data de nascimento",
+    value=date(1980, 1, 1),
+    min_value=date(1900, 1, 1),
+    max_value=date.today(),
+    key="cad_nasc"
+)
             cidade = st.text_input("Cidade", key="cad_cidade")
 
             uf = st.selectbox(
