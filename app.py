@@ -40,7 +40,7 @@ def calcular_idade(nascimento):
         return "Não informado"
 
 # =========================
-# AUTH
+# AUTH SYSTEM
 # =========================
 def auth_system():
 
@@ -132,6 +132,8 @@ def auth_system():
 
                 if nome and email and senha and cidade:
 
+                    df = ler_planilha("usuarios")
+
                     novo = pd.DataFrame([{
                         "nome": nome.strip(),
                         "email": email.strip().lower(),
@@ -142,11 +144,13 @@ def auth_system():
                         "nascimento": str(nascimento)
                     }])
 
-                    conn.append(worksheet="usuarios", data=novo)
+                    df = pd.concat([df, novo], ignore_index=True)
+                    conn.update(worksheet="usuarios", data=df)
+
                     st.success("Cadastro realizado!")
 
                 else:
-                    st.warning("Preencha todos os campos obrigatórios")
+                    st.warning("Preencha todos os campos")
 
         return False
 
@@ -154,7 +158,7 @@ def auth_system():
 
 
 # =========================
-# APP
+# APP PRINCIPAL
 # =========================
 if auth_system():
 
@@ -214,12 +218,7 @@ if auth_system():
         if pd.isna(nasc_default):
             nasc_default = date(2000, 1, 1)
 
-        nascimento = st.date_input(
-            "Data de nascimento",
-            value=nasc_default,
-            key="edit_nasc"
-        )
-
+        nascimento = st.date_input("Data de nascimento", value=nasc_default, key="edit_nasc")
         cidade = st.text_input("Cidade", p["Cidade"], key="edit_cidade")
 
         if st.button("Salvar", key="btn_save_profile"):
@@ -254,9 +253,9 @@ if auth_system():
 
         st.subheader("Avaliação")
 
-        calo = st.radio("Calosidade?", ["Não","Sim"], key="calo")
-        ulcera = st.radio("Úlcera?", ["Não","Sim"], key="ulcera")
-        amputacao = st.radio("Amputação?", ["Não","Sim"], key="amputacao")
+        calo = st.radio("Calosidade?", ["Não", "Sim"], key="calo")
+        ulcera = st.radio("Úlcera?", ["Não", "Sim"], key="ulcera")
+        amputacao = st.radio("Amputação?", ["Não", "Sim"], key="amputacao")
 
         local = st.text_input("Local amputação", key="local_amp") if amputacao == "Sim" else ""
 
@@ -267,6 +266,8 @@ if auth_system():
             risco = "MÉDIO"
 
         if st.button("Salvar avaliação", key="btn_save_avaliacao"):
+
+            df = ler_planilha("avaliacoes")
 
             registro = pd.DataFrame([{
                 "Nome": p["Nome"],
@@ -280,7 +281,9 @@ if auth_system():
                 "Data": datetime.now().strftime("%d/%m/%Y %H:%M")
             }])
 
-            conn.append(worksheet="avaliacoes", data=registro)
+            df = pd.concat([df, registro], ignore_index=True)
+            conn.update(worksheet="avaliacoes", data=df)
+
             st.success("Avaliação salva!")
 
         st.markdown("### Histórico")
