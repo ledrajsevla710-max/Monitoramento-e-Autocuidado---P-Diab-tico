@@ -84,7 +84,7 @@ def auth_system():
             telefone = st.text_input("Telefone", key="cad_tel")
             nascimento = st.date_input(
     "Data de nascimento",
-    value=date(1980, 1, 1),
+    value=date(1950, 1, 1),
     min_value=date(1900, 1, 1),
     max_value=date.today(),
     key="cad_nasc"
