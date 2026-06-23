@@ -83,14 +83,12 @@ def auth_system():
             senha = st.text_input("Senha", type="password", key="cad_senha")
             telefone = st.text_input("Telefone", key="cad_tel")
             nascimento = st.date_input(
-nascimento = st.date_input(
     "Data de nascimento",
     value=date(1980, 1, 1),
     min_value=date(1900, 1, 1),
     max_value=date.today(),
-    format="DD/MM/YYYY",
     key="cad_nasc"
-))
+)
             cidade = st.text_input("Cidade", key="cad_cidade")
 
             uf = st.selectbox(
