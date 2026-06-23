@@ -90,7 +90,7 @@ nascimento = st.date_input(
     max_value=date.today(),
     format="DD/MM/YYYY",
     key="cad_nasc"
-)
+))
             cidade = st.text_input("Cidade", key="cad_cidade")
 
             uf = st.selectbox(
