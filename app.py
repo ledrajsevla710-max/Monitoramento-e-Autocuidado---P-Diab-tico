@@ -3,12 +3,16 @@ import pandas as pd
 from datetime import datetime, date
 from streamlit_gsheets import GSheetsConnection
 
-# --- CONFIG ---
+# =========================
+# CONFIG
+# =========================
 st.set_page_config(page_title="Passo Seguro", page_icon="👣", layout="wide")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- SAFE READ ---
+# =========================
+# SAFE READ
+# =========================
 def ler_planilha(worksheet):
     try:
         df = conn.read(worksheet=worksheet, ttl=0)
@@ -18,7 +22,9 @@ def ler_planilha(worksheet):
     except:
         return pd.DataFrame()
 
-# --- FUNÇÕES ---
+# =========================
+# FUNÇÕES
+# =========================
 def limpar_valor(v):
     v = str(v).strip()
     return v[:-2] if v.endswith(".0") else v
@@ -33,7 +39,9 @@ def calcular_idade(nascimento):
     except:
         return "Não informado"
 
-# --- AUTH ---
+# =========================
+# AUTH
+# =========================
 def auth_system():
 
     if "authenticated" not in st.session_state:
@@ -45,12 +53,15 @@ def auth_system():
 
         tab_login, tab_cadastro = st.tabs(["🔐 Login", "📝 Cadastro"])
 
+        # =========================
         # LOGIN
+        # =========================
         with tab_login:
-            email_login = st.text_input("E-mail")
-            senha_login = st.text_input("Senha", type="password")
 
-            if st.button("Entrar"):
+            email_login = st.text_input("E-mail", key="login_email")
+            senha_login = st.text_input("Senha", type="password", key="login_senha")
+
+            if st.button("Entrar", key="btn_login"):
 
                 df = ler_planilha("usuarios")
 
@@ -59,12 +70,8 @@ def auth_system():
                     return False
 
                 df.columns = [c.lower().strip() for c in df.columns]
-
-                if "email" not in df.columns or "senha" not in df.columns:
-                    st.error("Planilha inválida")
-                    return False
-
                 df = df.astype(str)
+
                 df["email"] = df["email"].str.lower().str.strip()
                 df["senha_c"] = df["senha"].apply(limpar_valor)
 
@@ -95,33 +102,35 @@ def auth_system():
                 else:
                     st.error("Login inválido")
 
+        # =========================
         # CADASTRO
+        # =========================
         with tab_cadastro:
 
-            nome = st.text_input("Nome")
-            email = st.text_input("Email")
-            senha = st.text_input("Senha", type="password")
-            telefone = st.text_input("Telefone")
+            nome = st.text_input("Nome", key="cad_nome")
+            email = st.text_input("Email", key="cad_email")
+            senha = st.text_input("Senha", type="password", key="cad_senha")
+            telefone = st.text_input("Telefone", key="cad_tel")
 
             nascimento = st.date_input(
                 "Data de nascimento",
                 value=date(2000, 1, 1),
                 min_value=date(1900, 1, 1),
-                max_value=date.today()
+                max_value=date.today(),
+                key="cad_nasc"
             )
 
-            cidade = st.text_input("Cidade")
+            cidade = st.text_input("Cidade", key="cad_cidade")
 
             uf = st.selectbox(
                 "UF",
-                ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"]
+                ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"],
+                key="cad_uf"
             )
 
-            if st.button("Cadastrar"):
+            if st.button("Cadastrar", key="btn_cad"):
 
                 if nome and email and senha and cidade:
-
-                    df = ler_planilha("usuarios")
 
                     novo = pd.DataFrame([{
                         "nome": nome.strip(),
@@ -137,14 +146,16 @@ def auth_system():
                     st.success("Cadastro realizado!")
 
                 else:
-                    st.warning("Preencha todos os campos")
+                    st.warning("Preencha todos os campos obrigatórios")
 
         return False
 
     return True
 
 
-# --- APP ---
+# =========================
+# APP
+# =========================
 if auth_system():
 
     if "etapa" not in st.session_state:
@@ -174,12 +185,14 @@ if auth_system():
             st.session_state.lembrete_ok = True
             st.rerun()
 
+    # =========================
     # HOME
+    # =========================
     if st.session_state.etapa == 0:
 
         st.title("👣 Passo Seguro")
 
-        busca = st.text_input("Pesquisar saúde")
+        busca = st.text_input("Pesquisar saúde", key="busca_home")
         if busca:
             st.markdown(f"[Buscar no Google](https://www.google.com/search?q={busca})")
 
@@ -187,22 +200,29 @@ if auth_system():
         st.success("✔ Hidrate corretamente")
         st.success("✔ Use calçado adequado")
 
+    # =========================
     # PERFIL
+    # =========================
     elif st.session_state.etapa == 1:
 
         p = st.session_state.dados_paciente
 
-        nome = st.text_input("Nome", p["Nome"])
-        telefone = st.text_input("Telefone", p["Telefone"])
+        nome = st.text_input("Nome", p["Nome"], key="edit_nome")
+        telefone = st.text_input("Telefone", p["Telefone"], key="edit_tel")
+
+        nasc_default = pd.to_datetime(p["Nascimento"], errors="coerce")
+        if pd.isna(nasc_default):
+            nasc_default = date(2000, 1, 1)
 
         nascimento = st.date_input(
             "Data de nascimento",
-            value=pd.to_datetime(p["Nascimento"], errors="coerce") if p["Nascimento"] else date(2000,1,1)
+            value=nasc_default,
+            key="edit_nasc"
         )
 
-        cidade = st.text_input("Cidade", p["Cidade"])
+        cidade = st.text_input("Cidade", p["Cidade"], key="edit_cidade")
 
-        if st.button("Salvar"):
+        if st.button("Salvar", key="btn_save_profile"):
 
             df = ler_planilha("usuarios")
 
@@ -220,11 +240,13 @@ if auth_system():
 
                     conn.update(worksheet="usuarios", data=df)
 
-            st.success("Atualizado!")
+            st.success("Perfil atualizado!")
             st.session_state.etapa = 0
             st.rerun()
 
+    # =========================
     # AVALIAÇÃO
+    # =========================
     elif st.session_state.etapa == 2:
 
         p = st.session_state.dados_paciente
@@ -232,11 +254,11 @@ if auth_system():
 
         st.subheader("Avaliação")
 
-        calo = st.radio("Calosidade?", ["Não","Sim"])
-        ulcera = st.radio("Úlcera?", ["Não","Sim"])
-        amputacao = st.radio("Amputação?", ["Não","Sim"])
+        calo = st.radio("Calosidade?", ["Não","Sim"], key="calo")
+        ulcera = st.radio("Úlcera?", ["Não","Sim"], key="ulcera")
+        amputacao = st.radio("Amputação?", ["Não","Sim"], key="amputacao")
 
-        local = st.text_input("Local amputação") if amputacao == "Sim" else ""
+        local = st.text_input("Local amputação", key="local_amp") if amputacao == "Sim" else ""
 
         risco = "BAIXO"
         if ulcera == "Sim":
@@ -244,7 +266,7 @@ if auth_system():
         elif calo == "Sim":
             risco = "MÉDIO"
 
-        if st.button("Salvar avaliação"):
+        if st.button("Salvar avaliação", key="btn_save_avaliacao"):
 
             registro = pd.DataFrame([{
                 "Nome": p["Nome"],
@@ -267,6 +289,6 @@ if auth_system():
 
         if not df_hist.empty:
             df_p = df_hist[df_hist["Nome"] == p["Nome"]]
-            st.dataframe(df_p.tail(5))
+            st.dataframe(df_p.tail(5), use_container_width=True)
         else:
             st.info("Sem registros")
